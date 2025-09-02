@@ -167,7 +167,7 @@ export class ApiScanner {
     }
 
     // Format and save documentation
-    const output = await this.formatter.format(documentation, this.options.format!);
+    const output = await this.formatter.format(documentation, this.options.format!, this.options.verbose);
     await fs.writeFile(this.options.output!, output);
 
     if (this.options.verbose) {

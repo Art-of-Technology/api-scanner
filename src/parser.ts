@@ -262,8 +262,9 @@ export class Parser {
   private extractTags(file: string): string[] {
     const tags: string[] = [];
     
-    // Extract tags from file path
-    const pathParts = file.split('/');
+    // Extract tags from file path - handle both Windows and Unix paths
+    const normalizedPath = file.replace(/\\/g, '/');
+    const pathParts = normalizedPath.split('/');
     const apiIndex = pathParts.findIndex(part => part === 'api');
     
     if (apiIndex !== -1 && apiIndex < pathParts.length - 1) {

@@ -10,11 +10,13 @@ Next.js API route scanner that automatically generates API documentation from yo
 ## Features
 
 - 🔍 **Automatic Discovery**: Scans your `/api` directory for route files
-- 📝 **Multiple Formats**: Output in JSON, Markdown, or Swagger/OpenAPI format
+- 📝 **Multiple Formats**: Output in JSON, Markdown, Swagger/OpenAPI, or beautiful HTML format
+- 🌐 **Interactive HTML**: Auto-opening, responsive HTML documentation with Bootstrap UI
 - 🚀 **Next.js App Router**: Supports the new App Router structure (`src/app/api/`)
 - 🔧 **Configurable**: Customize scanning behavior with config files
 - 📊 **Rich Metadata**: Extracts parameters, responses, and descriptions
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
+- 🎨 **Beautiful UI**: Modern, responsive HTML documentation with Collab UI-inspired dark theme, animations and search
 
 ## Installation
 
@@ -42,6 +44,12 @@ npx api-scanner --path src/app/api --output docs.json
 # 📝 Different format
 npx api-scanner --format markdown --output api-docs.md
 
+# 🌐 Generate beautiful HTML documentation (auto-opens in browser)
+npx api-scanner --format html --output api-docs.html
+
+# 🚫 Generate HTML without auto-opening
+npx api-scanner --format html --output api-docs.html --no-open
+
 # 🔍 Verbose output
 npx api-scanner --verbose
 
@@ -54,6 +62,7 @@ npx api-scanner --examples
 ```typescript
 import { ApiScanner } from 'api-scanner';
 
+// Generate JSON documentation
 const scanner = new ApiScanner({
   path: 'src/app/api',
   output: 'api-docs.json',
@@ -62,6 +71,17 @@ const scanner = new ApiScanner({
 });
 
 await scanner.generateDocumentation();
+
+// Generate HTML documentation
+const htmlScanner = new ApiScanner({
+  path: 'src/app/api',
+  output: 'api-docs.html',
+  format: 'html',
+  verbose: true
+});
+
+await htmlScanner.generateDocumentation();
+// HTML file will automatically open in browser (unless --no-open is used)
 ```
 
 ## CLI Options
@@ -70,10 +90,11 @@ await scanner.generateDocumentation();
 |--------|-------------|---------|
 | `-p, --path <path>` | Path to scan for API routes | `src/app/api` |
 | `-o, --output <file>` | Output file path | `api-documentation.json` |
-| `-f, --format <format>` | Output format (json, markdown, swagger) | `json` |
+| `-f, --format <format>` | Output format (json, markdown, swagger, html) | `json` |
 | `-v, --verbose` | Enable verbose output | `false` |
 | `-c, --config <file>` | Configuration file path | `.api-scanner.json` |
 | `-i, --interactive` | Run in interactive mode | `false` |
+| `--no-open` | Do not auto-open HTML files in browser | `false` |
 | `--examples` | Show usage examples | `false` |
 
 ## Commands
@@ -90,10 +111,13 @@ Create a `.api-scanner.json` file in your project root:
 ```json
 {
   "path": "src/app/api",
-  "output": "docs/api.json",
-  "format": "swagger",
+  "output": "docs/api.html",
+  "format": "html",
   "ignore": ["**/test/**", "**/__tests__/**"],
-  "include": ["**/*.ts", "**/*.js"]
+  "include": ["**/*.ts", "**/*.js"],
+  "templates": {
+    "html": "custom-template.html"
+  }
 }
 ```
 
@@ -220,6 +244,37 @@ Get issues by workspace/project
 }
 ```
 
+### HTML Format
+
+The HTML format generates a beautiful, interactive documentation website with:
+
+- 🎨 **Modern Bootstrap UI**: Responsive design with Collab UI-inspired dark theme
+- 🌙 **Dark Theme**: Professional dark color scheme with white text for better readability
+- 📱 **Mobile-friendly**: Works perfectly on all devices
+- 🔍 **Interactive Features**: Table of contents, smooth scrolling, search
+- 🎭 **Animations**: Scroll-triggered animations for better UX
+- 📊 **Statistics**: Endpoint counts, categories, and generation info
+- 🌐 **Auto-open**: Automatically opens in your default browser
+- 🎯 **Categorized**: Endpoints grouped by tags/categories
+- 💎 **Compact Design**: Reduced padding and spacing for better information density
+
+```bash
+# Generate HTML documentation
+npx api-scanner --format html --output api-docs.html
+
+# The generated HTML includes:
+# - Responsive Bootstrap 5.3.0 design with Collab UI-inspired dark theme
+# - Professional dark color scheme with white text
+# - Bootstrap Icons for better visual appeal
+# - Interactive table of contents
+# - Smooth scroll animations
+# - Method badges (GET, POST, PUT, DELETE, PATCH)
+# - Parameter tables with required/optional indicators and dark backgrounds
+# - Response examples with syntax highlighting
+# - File path information for each endpoint
+# - Compact design with reduced padding for better information density
+```
+
 ## Supported Route Patterns
 
 The scanner supports the following Next.js App Router patterns:
@@ -302,6 +357,19 @@ export async function GET(
 
 ## Integration Examples
 
+### HTML Documentation (Recommended)
+
+```bash
+# Generate beautiful HTML documentation
+npx api-scanner --format html --output docs/api-docs.html
+
+# The HTML file is self-contained and can be:
+# - Served from any web server
+# - Hosted on GitHub Pages
+# - Shared directly with team members
+# - Integrated into your project's documentation site
+```
+
 ### With Swagger UI
 
 ```bash
@@ -328,7 +396,31 @@ npx api-scanner --format swagger --output openapi.json
 - name: Generate API Documentation
   run: |
     npm install api-scanner
-npx api-scanner --format swagger --output docs/openapi.json
+    npx api-scanner --format html --output docs/api-docs.html
+    npx api-scanner --format swagger --output docs/openapi.json
+
+- name: Deploy Documentation
+  run: |
+    # Deploy HTML docs to GitHub Pages or your hosting service
+    cp docs/api-docs.html public/
+```
+
+### Custom Templates
+
+You can customize the HTML output by providing your own templates:
+
+```bash
+# Use custom template
+npx api-scanner --format html --output docs/api-docs.html --config .api-scanner.json
+```
+
+```json
+{
+  "format": "html",
+  "templates": {
+    "html": "custom-templates/my-template.html"
+  }
+}
 ```
 
 ## Contributing

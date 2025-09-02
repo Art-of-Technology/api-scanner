@@ -5,6 +5,8 @@ import chalk from 'chalk';
 import ora from 'ora';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import * as readline from 'readline';
+import { exec } from 'child_process';
 import { ApiScanner } from './scanner';
 import { ScannerOptions, ConfigFile } from './types';
 
@@ -34,19 +36,21 @@ program
 program
   .option('-p, --path <path>', 'Path to scan for API routes (default: src/app/api)')
   .option('-o, --output <file>', 'Output file path (default: api-documentation.json)')
-  .option('-f, --format <format>', 'Output format: json, markdown, swagger (default: json)')
+  .option('-f, --format <format>', 'Output format: json, markdown, swagger, html (default: json)')
   .option('-v, --verbose', 'Enable verbose output')
   .option('-c, --config <file>', 'Configuration file path (default: .api-scanner.json)')
   .option('-i, --interactive', 'Run in interactive mode')
-  .option('--examples', 'Show usage examples');
-
-program.parse();
+  .option('--examples', 'Show usage examples')
+  .option('--no-open', 'Do not auto-open HTML files in browser')
+  .action(main);
 
 // Handle --examples flag
 if (process.argv.includes('--examples')) {
   showDetailedHelp();
   process.exit(0);
 }
+
+program.parse();
 
 async function main() {
   const options = program.opts();
@@ -74,7 +78,7 @@ async function main() {
     const scannerOptions: ScannerOptions = {
       path: options.path || config.path || 'src/app/api',
       output: options.output || config.output || 'api-documentation.json',
-      format: (options.format || config.format || 'json') as 'json' | 'markdown' | 'swagger',
+      format: (options.format || config.format || 'json') as 'json' | 'markdown' | 'swagger' | 'html',
       verbose: options.verbose || false,
       ignore: config.ignore,
       include: config.include
@@ -111,7 +115,10 @@ async function main() {
       console.log(chalk.green(`📄 Output: ${outputPath}`));
       console.log(chalk.green(`📊 Size: ${(stats.size / 1024).toFixed(2)} KB`));
       
-      if (scannerOptions.verbose) {
+      // Auto-open HTML files in browser
+      if (scannerOptions.format === 'html' && options.open !== false) {
+        await askToOpenInBrowser(outputPath);
+      } else if (scannerOptions.verbose) {
         console.log(chalk.gray('\nYou can now use this documentation with:'));
         console.log(chalk.gray('  - Swagger UI'));
         console.log(chalk.gray('  - Postman'));
@@ -148,6 +155,9 @@ function showDetailedHelp() {
   console.log(chalk.gray('  # Generate Markdown documentation'));
   console.log(chalk.gray('  npx api-scanner --format markdown --output docs/api.md'));
   console.log(chalk.gray(''));
+  console.log(chalk.gray('  # Generate HTML documentation'));
+  console.log(chalk.gray('  npx api-scanner --format html --output docs/api-docs.html'));
+  console.log(chalk.gray(''));
   console.log(chalk.gray('  # Scan specific path'));
   console.log(chalk.gray('  npx api-scanner --path src/app/api/auth'));
   console.log(chalk.gray(''));
@@ -157,15 +167,17 @@ function showDetailedHelp() {
   console.log(chalk.yellow.bold('⚙️  Configuration Options:'));
   console.log(chalk.gray('  --path <path>     Path to scan (default: src/app/api)'));
   console.log(chalk.gray('  --output <file>   Output file (default: api-documentation.json)'));
-  console.log(chalk.gray('  --format <type>   Format: json, markdown, swagger'));
+  console.log(chalk.gray('  --format <type>   Format: json, markdown, swagger, html'));
   console.log(chalk.gray('  --verbose         Show detailed output'));
   console.log(chalk.gray('  --config <file>   Config file (default: .api-scanner.json)'));
-  console.log(chalk.gray('  --interactive     Run in interactive mode\n'));
+  console.log(chalk.gray('  --interactive     Run in interactive mode'));
+  console.log(chalk.gray('  --no-open         Do not auto-open HTML files in browser\n'));
   
   console.log(chalk.yellow.bold('📁 Output Formats:'));
   console.log(chalk.gray('  json      - JSON format for programmatic use'));
   console.log(chalk.gray('  swagger   - OpenAPI 3.0 format for Swagger UI'));
-  console.log(chalk.gray('  markdown  - Human-readable documentation\n'));
+  console.log(chalk.gray('  markdown  - Human-readable documentation'));
+  console.log(chalk.gray('  html      - Beautiful HTML documentation (auto-opens in browser)\n'));
   
   console.log(chalk.yellow.bold('🔧 Configuration File (.api-scanner.json):'));
   console.log(chalk.gray('  {'));
@@ -210,13 +222,14 @@ async function runInteractiveWizard() {
     console.log(chalk.gray('  1. json - JSON format (programmatic use)'));
     console.log(chalk.gray('  2. swagger - OpenAPI 3.0 (Swagger UI)'));
     console.log(chalk.gray('  3. markdown - Human-readable docs'));
+    console.log(chalk.gray('  4. html - Beautiful HTML documentation'));
     
-    const formatAnswer = await question(chalk.yellow('\n🎯 Choose output format (1-3, default: 1): '));
-    const formatMap: { [key: string]: string } = { '1': 'json', '2': 'swagger', '3': 'markdown' };
+    const formatAnswer = await question(chalk.yellow('\n🎯 Choose output format (1-4, default: 1): '));
+    const formatMap: { [key: string]: string } = { '1': 'json', '2': 'swagger', '3': 'markdown', '4': 'html' };
     const format = formatMap[formatAnswer.trim()] || 'json';
 
     // Ask for output file
-    const defaultOutput = `api-documentation.${format === 'json' ? 'json' : format === 'swagger' ? 'json' : 'md'}`;
+    const defaultOutput = `api-documentation.${format === 'json' ? 'json' : format === 'swagger' ? 'json' : format === 'html' ? 'html' : 'md'}`;
     const outputAnswer = await question(chalk.yellow(`📄 Output file path? (default: ${defaultOutput}): `));
     const outputFile = outputAnswer.trim() || defaultOutput;
 
@@ -256,7 +269,7 @@ async function runInteractiveWizard() {
       const scannerOptions: ScannerOptions = {
         path: scanPath,
         output: outputFile,
-        format: format as 'json' | 'markdown' | 'swagger',
+        format: format as 'json' | 'markdown' | 'swagger' | 'html',
         verbose: verbose
       };
 
@@ -264,6 +277,12 @@ async function runInteractiveWizard() {
       await scanner.generateDocumentation();
       
       console.log(chalk.green('\n✅ Documentation generated successfully!'));
+      
+      // Auto-open HTML files in browser
+      if (format === 'html') {
+        const outputPath = path.resolve(outputFile);
+        openInBrowser(outputPath);
+      }
     } else {
       console.log(chalk.blue('\n💡 To run later, use:'));
       console.log(chalk.gray(`  npx api-scanner --path ${scanPath} --format ${format} --output ${outputFile}`));
@@ -289,6 +308,62 @@ async function loadConfig(configPath: string): Promise<ConfigFile> {
   return {};
 }
 
+async function askToOpenInBrowser(filePath: string): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question(chalk.blue('🌐 Open documentation in browser? (Y/n): '), (answer) => {
+      rl.close();
+      
+      const shouldOpen = answer.toLowerCase() === '' || answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+      
+      if (shouldOpen) {
+        openInBrowser(filePath);
+      } else {
+        console.log(chalk.gray('📄 HTML documentation generated. Open manually when ready.'));
+      }
+      
+      resolve();
+    });
+  });
+}
+
+function openInBrowser(filePath: string): void {
+  const absolutePath = path.resolve(filePath);
+  
+  // Determine the command based on the platform
+  let command: string;
+  const platform = process.platform;
+  
+  switch (platform) {
+    case 'win32':
+      command = `start "" "${absolutePath}"`;
+      break;
+    case 'darwin':
+      command = `open "${absolutePath}"`;
+      break;
+    case 'linux':
+      command = `xdg-open "${absolutePath}"`;
+      break;
+    default:
+      console.log(chalk.blue(`📄 HTML documentation generated: ${absolutePath}`));
+      console.log(chalk.gray('Open this file in your browser to view the documentation.'));
+      return;
+  }
+  
+  exec(command, (error) => {
+    if (error) {
+      console.log(chalk.blue(`📄 HTML documentation generated: ${absolutePath}`));
+      console.log(chalk.gray('Open this file in your browser to view the documentation.'));
+    } else {
+      console.log(chalk.green(`🌐 Opening documentation in browser...`));
+    }
+  });
+}
+
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error(chalk.red('❌ Uncaught Exception:'), error);
@@ -301,7 +376,4 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Run the CLI only if no subcommands are used
-if (require.main === module && !process.argv.includes('help') && !process.argv.includes('init')) {
-  main();
-}
+
