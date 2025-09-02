@@ -16,7 +16,7 @@ Next.js API route scanner that automatically generates API documentation from yo
 - 🔧 **Configurable**: Customize scanning behavior with config files
 - 📊 **Rich Metadata**: Extracts parameters, responses, and descriptions
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
-- 🎨 **Beautiful UI**: Modern, responsive HTML documentation with animations and search
+- 🎨 **Beautiful UI**: Modern, responsive HTML documentation with Collab UI-inspired dark theme, animations and search
 
 ## Installation
 
@@ -248,27 +248,31 @@ Get issues by workspace/project
 
 The HTML format generates a beautiful, interactive documentation website with:
 
-- 🎨 **Modern Bootstrap UI**: Responsive design with gradients and animations
+- 🎨 **Modern Bootstrap UI**: Responsive design with Collab UI-inspired dark theme
+- 🌙 **Dark Theme**: Professional dark color scheme with white text for better readability
 - 📱 **Mobile-friendly**: Works perfectly on all devices
 - 🔍 **Interactive Features**: Table of contents, smooth scrolling, search
 - 🎭 **Animations**: Scroll-triggered animations for better UX
 - 📊 **Statistics**: Endpoint counts, categories, and generation info
 - 🌐 **Auto-open**: Automatically opens in your default browser
 - 🎯 **Categorized**: Endpoints grouped by tags/categories
+- 💎 **Compact Design**: Reduced padding and spacing for better information density
 
 ```bash
 # Generate HTML documentation
 npx api-scanner --format html --output api-docs.html
 
 # The generated HTML includes:
-# - Responsive Bootstrap 5.3.0 design
+# - Responsive Bootstrap 5.3.0 design with Collab UI-inspired dark theme
+# - Professional dark color scheme with white text
 # - Bootstrap Icons for better visual appeal
 # - Interactive table of contents
 # - Smooth scroll animations
 # - Method badges (GET, POST, PUT, DELETE, PATCH)
-# - Parameter tables with required/optional indicators
+# - Parameter tables with required/optional indicators and dark backgrounds
 # - Response examples with syntax highlighting
 # - File path information for each endpoint
+# - Compact design with reduced padding for better information density
 ```
 
 ## Supported Route Patterns
