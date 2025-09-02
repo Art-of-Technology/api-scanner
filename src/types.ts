@@ -39,7 +39,7 @@ export interface ApiDocumentation {
 export interface ScannerOptions {
   path?: string;
   output?: string;
-  format?: 'json' | 'markdown' | 'swagger';
+  format?: 'json' | 'markdown' | 'swagger' | 'html';
   verbose?: boolean;
   ignore?: string[];
   include?: string[];
@@ -56,12 +56,13 @@ export interface ParsedRoute {
 export interface ConfigFile {
   path?: string;
   output?: string;
-  format?: 'json' | 'markdown' | 'swagger';
+  format?: 'json' | 'markdown' | 'swagger' | 'html';
   ignore?: string[];
   include?: string[];
   templates?: {
     json?: string;
     markdown?: string;
     swagger?: string;
+    html?: string;
   };
 }

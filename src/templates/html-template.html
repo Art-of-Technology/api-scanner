@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --info-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .hero-section {
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            pointer-events: none;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            height: 100%;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .stat-icon.endpoints { background: var(--success-gradient); }
+        .stat-icon.categories { background: var(--info-gradient); }
+        .stat-icon.version { background: var(--warning-gradient); }
+        .stat-icon.generated { background: var(--danger-gradient); }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .section-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+            padding: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            color: #495057;
+        }
+        
+        .endpoint-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .endpoint-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+        }
+        
+        .endpoint-card:hover {
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .method-badge {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .method-get { background: var(--success-gradient); color: white; }
+        .method-post { background: var(--info-gradient); color: white; }
+        .method-put { background: var(--warning-gradient); color: white; }
+        .method-delete { background: var(--danger-gradient); color: white; }
+        .method-patch { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+        
+        .endpoint-url {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #495057;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .endpoint-description {
+            color: #6c757d;
+            font-style: italic;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .parameters-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .parameters-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .parameters-table td {
+            border-color: #f1f3f4;
+            vertical-align: middle;
+        }
+        
+        .required-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .optional-badge {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .response-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #28a745;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .response-status {
+            font-weight: 700;
+            color: #28a745;
+            font-size: 1.1rem;
+        }
+        
+        .response-example {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .file-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            color: #1976d2;
+            margin-top: 1rem;
+            border: 1px solid #90caf9;
+        }
+        
+        .toc {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .toc h3 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .toc li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            display: block;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .toc a:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        
+        .btn-floating {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-floating:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+            
+            .endpoint-card {
+                padding: 1rem;
+            }
+            
+            .floating-action {
+                bottom: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Hero Section -->
+                <div class="hero-section">
+                    <div class="hero-content p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="display-4 fw-bold mb-3">
+                                    <i class="bi bi-code-slash me-3"></i>{{title}}
+                                </h1>
+                                <p class="lead mb-0">{{description}}</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <i class="bi bi-file-earmark-code" style="font-size: 4rem; opacity: 0.3;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stat-icon endpoints">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
+                            <div class="stat-number">{{totalEndpoints}}</div>
+                            <div class="text-muted">Total Endpoints</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stat-icon categories">
+                                <i class="bi bi-collection"></i>
+                            </div>
+                            <div class="stat-number">{{totalCategories}}</div>
+                            <div class="text-muted">Categories</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stat-icon version">
+                                <i class="bi bi-tag"></i>
+                            </div>
+                            <div class="stat-number">v{{version}}</div>
+                            <div class="text-muted">Version</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stat-icon generated">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="stat-number">{{generatedDate}}</div>
+                            <div class="text-muted">Generated</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table of Contents -->
+                <div class="toc">
+                    <h3><i class="bi bi-list-ul me-2"></i>Table of Contents</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul id="toc-list">
+                                <!-- TOC will be populated by JavaScript -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- API Sections -->
+                {{sections}}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Action Button -->
+    <div class="floating-action">
+        <button class="btn btn-floating" onclick="scrollToTop()" title="Back to Top">
+            <i class="bi bi-arrow-up"></i>
+        </button>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Generate Table of Contents
+        function generateTOC() {
+            const sections = document.querySelectorAll('.section-title');
+            const tocList = document.getElementById('toc-list');
+            
+            sections.forEach((section, index) => {
+                const link = document.createElement('a');
+                link.href = '#' + section.id;
+                link.textContent = section.textContent;
+                link.className = 'toc-link';
+                
+                const li = document.createElement('li');
+                li.appendChild(link);
+                tocList.appendChild(li);
+            });
+        }
+        
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            generateTOC();
+            
+            // Add animation to cards on scroll (with fallback)
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Initialize cards with animation
+            const cards = document.querySelectorAll('.section-card, .endpoint-card');
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+            
+            // Fallback: if IntersectionObserver is not supported, show all cards immediately
+            if (!window.IntersectionObserver) {
+                cards.forEach(card => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                });
+            }
+            
+            // Additional fallback: show cards after a delay if they're still hidden
+            setTimeout(() => {
+                cards.forEach(card => {
+                    if (card.style.opacity === '0') {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }
+                });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
