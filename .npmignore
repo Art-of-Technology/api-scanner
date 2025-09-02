@@ -1,0 +1,61 @@
+# Source files (not needed in npm package)
+src/
+*.ts
+*.tsx
+*.js
+*.jsx
+
+# Development files
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# Build and test files
+tsconfig.json
+.eslintrc*
+.prettierrc*
+jest.config.*
+coverage/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Development dependencies
+node_modules/
+
+# Documentation (keep README.md)
+CHANGELOG.md
+docs/
+
+# Configuration files
+.api-scanner.json
+.env*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Test outputs
+test-results/
+playwright-report/
+
