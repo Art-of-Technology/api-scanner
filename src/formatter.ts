@@ -244,6 +244,9 @@ export class Formatter {
       console.log(`Generated ${sectionsHtml.length} characters of sections HTML`);
     }
     
+    // Generate hierarchical TOC data for JavaScript
+    const tocData = this.generateTOCData(groupedEndpoints);
+    
     // Render main template
     return await this.templateEngine.renderTemplate('html-template', {
         title: documentation.info.title,
@@ -251,9 +254,27 @@ export class Formatter {
         totalEndpoints: documentation.totalEndpoints,
         totalCategories: Object.keys(groupedEndpoints).length,
         version: documentation.info.version,
+        generatedAt: documentation.generatedAt,
         generatedDate: new Date(documentation.generatedAt).toLocaleDateString('en-US'),
-        sections: sectionsHtml
+        endpoints: JSON.stringify(documentation.endpoints),
+        sections: sectionsHtml,
+        tocData: JSON.stringify(tocData)
     });
+  }
+
+  private generateTOCData(groupedEndpoints: Record<string, ApiEndpoint[]>): Record<string, any[]> {
+    const tocData: Record<string, any[]> = {};
+    
+    for (const [category, endpoints] of Object.entries(groupedEndpoints)) {
+      tocData[category] = endpoints.map(endpoint => ({
+        method: endpoint.method,
+        url: endpoint.url,
+        description: endpoint.description || '',
+        file: endpoint.file || ''
+      }));
+    }
+    
+    return tocData;
   }
 
   private async formatEndpointHtml(endpoint: ApiEndpoint): Promise<string> {

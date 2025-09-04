@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Scanner - Editor</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -53,7 +54,6 @@
         }
 
         .container-fluid {
-            max-width: 1200px;
             margin: 0 auto;
             padding: 0 1rem;
         }
@@ -165,32 +165,213 @@
             border: 1px solid var(--border-color);
         }
 
-        .file-buttons-container {
+        .toc {
             background: var(--bg-secondary);
             border-radius: 6px;
             padding: 1rem;
             border: 1px solid var(--border-color);
             margin-bottom: 1rem;
+            position: sticky;
+            top: 1rem;
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
         }
 
-        .file-buttons-container h6 {
+        .toc h3 {
             color: var(--text-primary);
             font-weight: 600;
             margin-bottom: 0.75rem;
             font-size: 1rem;
         }
 
-        .file-buttons {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.25rem;
+        .toc .file-buttons {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.25rem !important;
         }
 
-        .file-buttons li {
+        .toc .file-buttons li {
+            margin: 0 !important;
+        }
+
+        .toc .file-buttons a {
+            color: var(--text-primary) !important;
+            text-decoration: none !important;
+            padding: 0.4rem 0.75rem !important;
+            border-radius: 4px !important;
+            display: block !important;
+            transition: all 0.2s ease !important;
+            border: 1px solid transparent !important;
+            font-size: 0.85rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .toc .file-buttons a:hover {
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* TOC Folder Styles */
+        .toc-folder {
+            margin-bottom: 0.5rem;
+        }
+
+        .toc-folder-header {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .toc-folder-header:hover {
+            background: var(--bg-primary);
+        }
+
+        .folder-arrow {
+            transition: transform 0.2s ease;
+            margin-right: 0.5rem;
+        }
+
+        .toc-endpoints {
+            margin-top: 0.25rem;
+            padding-left: 1rem;
+            list-style: none;
+        }
+
+        .toc-endpoint {
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 0.75rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            margin-bottom: 0.25rem;
+        }
+
+        .toc-endpoint:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .toc-endpoint .method-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .toc-endpoint .endpoint-name {
+            font-size: 0.85rem;
+        }
+
+        /* Search Bar Styles */
+        #searchInput {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        #searchInput:focus {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--accent-blue) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        #searchInput::placeholder {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Search Results Styles */
+        .search-results {
+            color: var(--text-primary) !important;
+        }
+
+        .search-results .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        .search-results h5 {
+            color: var(--text-primary) !important;
+        }
+
+        .search-results p {
+            color: var(--text-primary) !important;
+        }
+
+        /* Search Preview Cards */
+        .search-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1rem;
+        }
+
+        .search-preview-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-preview-card:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-preview-card .method-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .search-preview-card .endpoint-url {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .search-preview-card .endpoint-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
             margin: 0;
+        }
+
+        .search-preview-card .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .hero-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .hero-content {
+            color: var(--text-primary);
         }
 
         .file-btn {
@@ -232,34 +413,20 @@
             transform: translateY(-2px);
         }
 
-        .stats-grid {
-            display: flex;
-            flex-direction: row;
-            gap: 1rem;
-            justify-content: center;
-            align-items: stretch;
-            flex-wrap: nowrap;
-        }
 
         .stats-card {
             background: var(--bg-secondary);
             border-radius: 6px;
-            padding: 1rem;
+            padding: 0.75rem;
             border: 1px solid var(--border-color);
             transition: background-color 0.2s ease;
-            flex: 1;
-            min-width: 0;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            height: 100%;
         }
-
+        
         .stats-card:hover {
             background: var(--bg-tertiary);
         }
-
+        
         .stat-icon {
             width: 32px;
             height: 32px;
@@ -268,43 +435,43 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
         }
-
-        .stat-icon.endpoints {
-            background: var(--accent-green);
-        }
-
-        .stat-icon.categories {
-            background: var(--accent-blue);
-        }
-
-        .stat-icon.version {
-            background: var(--accent-orange);
-        }
-
-        .stat-icon.generated {
-            background: var(--accent-purple);
-        }
-
+        
+        .stat-icon.endpoints { background: var(--accent-green); }
+        .stat-icon.categories { background: var(--accent-blue); }
+        .stat-icon.version { background: var(--accent-orange); }
+        .stat-icon.generated { background: var(--accent-purple); }
+        
         .stat-number {
             font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-align: center;
+            font-weight: 600;
             margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
             color: var(--text-primary);
-            text-align: center;
-            font-weight: 500;
         }
 
         @media (max-width: 768px) {
-            .file-buttons {
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-                gap: 0.2rem;
+            .toc {
+                position: static !important;
+                max-height: none !important;
+                margin-bottom: 1rem;
+            }
+            
+            .toc .file-buttons {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+                gap: 0.2rem !important;
+            }
+            
+            .toc .file-buttons a {
+                padding: 0.3rem 0.5rem !important;
+                font-size: 0.8rem !important;
+                white-space: normal !important;
+            }
+            
+            .stats-card {
+                margin-bottom: 0.75rem;
             }
             
             .file-btn {
@@ -316,37 +483,24 @@
                 padding: 0 0.5rem;
             }
 
-            .stats-grid {
-                flex-wrap: wrap;
-                gap: 0.75rem;
-            }
-
             .stats-card {
-                padding: 0.75rem;
-                flex: 1 1 calc(50% - 0.375rem);
-                min-width: 120px;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                min-height: 100px;
             }
-
+            
             .stat-number {
-                font-size: 1.25rem;
+                font-size: 1.5rem;
+            }
+            
+            .stat-icon {
+                font-size: 1.5rem;
+                width: 50px;
+                height: 50px;
             }
 
-            .stat-label {
-                font-size: 0.7rem;
-            }
         }
 
-        @media (max-width: 480px) {
-            .stats-grid {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .stats-card {
-                flex: none;
-                width: 100%;
-            }
-        }
 
         .edit-btn {
             background-color: var(--accent-blue);
@@ -412,58 +566,85 @@
                 <i class="fas fa-edit me-2"></i>
                 API Scanner - Editor
             </span>
-            <div class="navbar-nav ms-auto">
-                <!-- File info removed - information is now in statistics cards -->
+            <div class="navbar-nav ms-auto d-flex align-items-center">
+                <!-- Search Bar -->
+                <div class="nav-item me-3">
+                    <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control form-control-sm" style="width: 250px;">
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
     <div class="main-container">
-        <div class="container-fluid">
-            <!-- Loading State -->
-            <div id="loading-state" class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+        <div class="container-fluid py-2">
+            <div class="row">
+                <!-- Left Sidebar - Table of Contents -->
+                <div class="col-lg-3 col-md-4">
+                    <div class="toc">
+                        <h3><i class="bi bi-list-ul me-2"></i>Table of Contents</h3>
+                        <ul id="toc-list" class="file-buttons">
+                            <!-- TOC will be populated by JavaScript -->
+                        </ul>
+                    </div>
                 </div>
-                <p class="mt-3 text-muted">Loading API documentation...</p>
-            </div>
+                
+                <!-- Main Content -->
+                <div class="col-lg-9 col-md-8">
+                    <!-- Loading State -->
+                    <div id="loading-state" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading API documentation...</p>
+                    </div>
 
-            <!-- Statistics Cards -->
-            <div class="stats-grid mb-3" id="stats-container" style="display: none;">
-                <div class="stats-card">
-                    <div class="stat-icon endpoints">
-                        <i class="fas fa-diagram-3"></i>
-                    </div>
-                    <div class="stat-number" id="total-endpoints">0</div>
-                    <div class="stat-label">Total Endpoints</div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon categories">
-                        <i class="fas fa-folder"></i>
-                    </div>
-                    <div class="stat-number" id="total-categories">0</div>
-                    <div class="stat-label">Categories</div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon version">
-                        <i class="fas fa-tag"></i>
-                    </div>
-                    <div class="stat-number" id="api-version">v1.0.0</div>
-                    <div class="stat-label">Version</div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon generated">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="stat-number" id="generated-date">-</div>
-                    <div class="stat-label">Generated</div>
-                </div>
-            </div>
 
-            <!-- Endpoints Container -->
-            <div id="endpoints-container" class="d-none">
-                <!-- Endpoints will be dynamically loaded here -->
+                    <!-- Statistics Cards -->
+                    <div class="row mb-3" id="stats-container">
+                        <div class="col-lg-3 col-md-6 mb-2">
+                            <div class="stats-card text-center">
+                                <div class="stat-icon endpoints">
+                                    <i class="bi bi-diagram-3"></i>
+                                </div>
+                                <div class="stat-number" id="total-endpoints">0</div>
+                                <div class="small">Total Endpoints</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-2">
+                            <div class="stats-card text-center">
+                                <div class="stat-icon categories">
+                                    <i class="bi bi-collection"></i>
+                                </div>
+                                <div class="stat-number" id="total-categories">0</div>
+                                <div class="small">Categories</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-2">
+                            <div class="stats-card text-center">
+                                <div class="stat-icon version">
+                                    <i class="bi bi-tag"></i>
+                                </div>
+                                <div class="stat-number" id="api-version">v1.0.0</div>
+                                <div class="small">Version</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-2">
+                            <div class="stats-card text-center">
+                                <div class="stat-icon generated">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                                <div class="stat-number" id="generated-date">-</div>
+                                <div class="small">Generated</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Endpoints Container -->
+                    <div id="endpoints-container">
+                        <!-- Endpoints will be dynamically loaded here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>

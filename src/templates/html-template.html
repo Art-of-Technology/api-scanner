@@ -6,6 +6,7 @@
     <title>{{title}}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #1a1a1a;
@@ -21,6 +22,10 @@
             --accent-purple: #a78bfa;
             --border-color: #404040;
         }
+
+        * {
+            color: var(--text-primary) !important;
+        }
         
         body {
             background: var(--bg-primary);
@@ -31,138 +36,46 @@
             line-height: 1.4;
         }
         
-        /* Force all text to be white */
-        * {
-            color: var(--text-primary) !important;
-        }
-        
-        /* Override Bootstrap text colors */
-        .text-dark, .text-black {
-            color: var(--text-primary) !important;
-        }
-        
-        .text-muted {
-            color: var(--text-primary) !important;
-        }
-        
-        .text-secondary {
-            color: var(--text-primary) !important;
-        }
-        
-        /* Override all Bootstrap text utilities */
-        .text-body, .text-body-secondary, .text-body-tertiary {
-            color: var(--text-primary) !important;
-        }
-        
-        /* Override any remaining dark text */
-        p, span, div, td, th, li, a, small, strong, em {
-            color: var(--text-primary) !important;
-        }
-        
-        /* Ensure code blocks are also white */
-        code, pre {
-            color: var(--text-primary) !important;
-        }
-        
-        .hero-section {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 1rem;
-            padding: 1rem;
-        }
-        
-        .hero-content {
-            position: relative;
-        }
-        
-        .stats-card {
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            transition: background-color 0.2s ease;
-            height: 100%;
-        }
-        
-        .stats-card:hover {
-            background: var(--bg-tertiary);
-        }
-        
-        .stat-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-primary);
-        }
-        
-        .stat-icon.endpoints { background: var(--accent-green); }
-        .stat-icon.categories { background: var(--accent-blue); }
-        .stat-icon.version { background: var(--accent-orange); }
-        .stat-icon.generated { background: var(--accent-purple); }
-        
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            color: var(--text-primary);
-        }
-        
-        .section-card {
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 1rem;
-            overflow: hidden;
-            transition: background-color 0.2s ease;
-        }
-        
-        .section-card:hover {
-            background: var(--bg-tertiary);
-        }
-        
-        .section-header {
-            background: var(--bg-tertiary);
+        .navbar {
+            background-color: var(--bg-secondary) !important;
             border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 1rem;
+            padding: 0.5rem 0;
         }
-        
-        .section-title {
-            font-size: 1.1rem;
+
+        .navbar-brand {
             font-weight: 600;
-            margin: 0;
-            color: var(--text-primary);
+            font-size: 1.1rem;
         }
-        
+
+        .main-container {
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            padding: 1rem 0;
+        }
+
+        .container-fluid {
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
         .endpoint-card {
-            background: var(--bg-primary);
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
             transition: background-color 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .endpoint-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            background: var(--accent-blue);
         }
         
         .endpoint-card:hover {
-            background: var(--bg-secondary);
+            background: var(--bg-tertiary);
+        }
+        
+        .endpoint-header {
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 6px 6px 0 0;
         }
         
         .method-badge {
@@ -180,72 +93,8 @@
         .method-delete { background: var(--accent-red); color: white; }
         .method-patch { background: var(--accent-purple); color: white; }
         
-        .endpoint-url {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            background: var(--bg-tertiary);
-            padding: 0.4rem 0.75rem;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-        
-        .endpoint-description {
-            color: var(--text-primary);
-            font-style: italic;
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            background: var(--bg-tertiary);
-            border-radius: 4px;
-            border-left: 3px solid var(--accent-blue);
-            font-size: 0.85rem;
-        }
-        
-        .parameters-table {
-            background: var(--bg-primary);
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-        
-        .parameters-table th {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: none;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            letter-spacing: 0.3px;
-            padding: 0.5rem;
-        }
-        
-        .parameters-table td {
-            background: var(--bg-primary);
-            border-color: var(--border-color);
-            vertical-align: middle;
-            padding: 0.5rem;
-            color: var(--text-primary);
-            font-size: 0.8rem;
-        }
-        
-        .required-badge {
-            background: var(--accent-red);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-size: 0.65rem;
-            font-weight: 600;
-        }
-        
-        .optional-badge {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            border: 1px solid var(--border-color);
+        .endpoint-body {
+            padding: 1rem;
         }
         
         .response-item {
@@ -292,6 +141,10 @@
             padding: 1rem;
             border: 1px solid var(--border-color);
             margin-bottom: 1rem;
+            position: sticky;
+            top: 1rem;
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
         }
         
         .toc h3 {
@@ -305,8 +158,8 @@
             list-style: none !important;
             padding: 0 !important;
             margin: 0 !important;
-            display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+            display: flex !important;
+            flex-direction: column !important;
             gap: 0.25rem !important;
         }
 
@@ -323,11 +176,176 @@
             transition: all 0.2s ease !important;
             border: 1px solid transparent !important;
             font-size: 0.85rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
 
         .toc .file-buttons a:hover {
             background: var(--bg-tertiary) !important;
             color: var(--text-primary) !important;
+        }
+
+        /* TOC Folder Styles */
+        .toc-folder {
+            margin-bottom: 0.5rem;
+        }
+
+        .toc-folder-header {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .toc-folder-header:hover {
+            background: var(--bg-primary);
+        }
+
+        .folder-arrow {
+            transition: transform 0.2s ease;
+            margin-right: 0.5rem;
+        }
+
+        .toc-endpoints {
+            margin-top: 0.25rem;
+            padding-left: 1rem;
+            list-style: none;
+        }
+
+        .toc-endpoint {
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 0.75rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            margin-bottom: 0.25rem;
+        }
+
+        .toc-endpoint:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .toc-endpoint .method-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .toc-endpoint .endpoint-name {
+            font-size: 0.85rem;
+        }
+
+        /* Search Bar Styles */
+        #searchInput {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        #searchInput:focus {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--accent-blue) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        #searchInput::placeholder {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Search Results Styles */
+        .search-results {
+            color: var(--text-primary) !important;
+        }
+
+        .search-results .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        .search-results h5 {
+            color: var(--text-primary) !important;
+        }
+
+        .search-results p {
+            color: var(--text-primary) !important;
+        }
+
+        /* Search Preview Cards */
+        .search-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1rem;
+        }
+
+        .search-preview-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-preview-card:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-preview-card .method-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .search-preview-card .endpoint-url {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .search-preview-card .endpoint-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .search-preview-card .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .file-btn {
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            display: block;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            font-size: 0.85rem;
+        }
+
+        .file-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
         
         .floating-action {
@@ -353,21 +371,52 @@
             transform: translateY(-2px);
         }
         
-        @media (max-width: 768px) {
-            .hero-section {
-                margin: 0.5rem;
+        .stats-card {
+            background: var(--bg-secondary);
                 border-radius: 6px;
-            }
-            
-            .stats-card {
-                margin-bottom: 0.75rem;
-            }
-            
-            .endpoint-card {
-                padding: 0.5rem;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+            height: 100%;
+        }
+        
+        .stats-card:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        
+        .stat-icon.endpoints { background: var(--accent-green); }
+        .stat-icon.categories { background: var(--accent-blue); }
+        .stat-icon.version { background: var(--accent-orange); }
+        .stat-icon.generated { background: var(--accent-purple); }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .toc {
+                position: static !important;
+                max-height: none !important;
+                margin-bottom: 1rem;
             }
             
             .toc .file-buttons {
+                display: grid !important;
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
                 gap: 0.2rem !important;
             }
@@ -375,44 +424,89 @@
             .toc .file-buttons a {
                 padding: 0.3rem 0.5rem !important;
                 font-size: 0.8rem !important;
+                white-space: normal !important;
             }
             
-            .floating-action {
-                bottom: 0.75rem;
-                right: 0.75rem;
+            .stats-card {
+                margin-bottom: 0.75rem;
+            }
+            
+            .file-btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .container-fluid {
+                padding: 0 0.5rem;
+            }
+
+            .stats-card {
+                margin-bottom: 1rem;
+                padding: 1rem;
+                min-height: 100px;
+            }
+            
+            .stat-number {
+                font-size: 1.5rem;
+            }
+            
+            .stat-icon {
+                font-size: 1.5rem;
+                width: 50px;
+                height: 50px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container py-2">
-        <div class="row">
-            <div class="col-12">
-                <!-- Hero Section -->
-                <div class="hero-section">
-                    <div class="hero-content">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h1 class="h3 fw-bold mb-2">
-                                    <i class="bi bi-code-slash me-2"></i>{{title}}
-                                </h1>
-                                <p class="mb-0">{{description}}</p>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <i class="bi bi-file-earmark-code" style="font-size: 2rem; opacity: 0.3;"></i>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-code me-2"></i>
+                {{title}}
+            </span>
+            <div class="navbar-nav ms-auto d-flex align-items-center">
+                <!-- Search Bar -->
+                <div class="nav-item me-3">
+                    <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control form-control-sm" style="width: 250px;">
                             </div>
                         </div>
                     </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="container-fluid py-2">
+            <div class="row">
+                <!-- Left Sidebar - Table of Contents -->
+                <div class="col-lg-3 col-md-4">
+                    <div class="toc">
+                        <h3><i class="bi bi-list-ul me-2"></i>Table of Contents</h3>
+                        <ul id="toc-list" class="file-buttons">
+                            <!-- TOC will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="col-lg-9 col-md-8">
+                    <!-- Loading State -->
+                    <div id="loading-state" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading API documentation...</p>
                 </div>
                 
                 <!-- Statistics Cards -->
-                <div class="row mb-3">
+                    <div class="row mb-3" id="stats-container">
                     <div class="col-lg-3 col-md-6 mb-2">
                         <div class="stats-card text-center">
                             <div class="stat-icon endpoints">
                                 <i class="bi bi-diagram-3"></i>
                             </div>
-                            <div class="stat-number">{{totalEndpoints}}</div>
+                                <div class="stat-number" id="total-endpoints">0</div>
                             <div class="small">Total Endpoints</div>
                         </div>
                     </div>
@@ -421,7 +515,7 @@
                             <div class="stat-icon categories">
                                 <i class="bi bi-collection"></i>
                             </div>
-                            <div class="stat-number">{{totalCategories}}</div>
+                                <div class="stat-number" id="total-categories">0</div>
                             <div class="small">Categories</div>
                         </div>
                     </div>
@@ -430,7 +524,7 @@
                             <div class="stat-icon version">
                                 <i class="bi bi-tag"></i>
                             </div>
-                            <div class="stat-number">v{{version}}</div>
+                                <div class="stat-number" id="api-version">v1.0.0</div>
                             <div class="small">Version</div>
                         </div>
                     </div>
@@ -439,26 +533,32 @@
                             <div class="stat-icon generated">
                                 <i class="bi bi-calendar-check"></i>
                             </div>
-                            <div class="stat-number">{{generatedDate}}</div>
+                                <div class="stat-number" id="generated-date">-</div>
                             <div class="small">Generated</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Table of Contents -->
-                <div class="toc">
-                    <h3><i class="bi bi-list-ul me-2"></i>Table of Contents</h3>
-                    <ul id="toc-list" class="file-buttons">
-                        <!-- TOC will be populated by JavaScript -->
-                    </ul>
+                    <!-- Endpoints Container -->
+                    <div id="endpoints-container">
+                        <!-- Endpoints will be dynamically loaded here -->
+                    </div>
                 </div>
-                
-                <!-- API Sections -->
-                {{sections}}
             </div>
         </div>
     </div>
     
+    <!-- Hidden data elements for template variables -->
+    <div id="template-data" style="display: none;">
+        <span id="template-title">{{title}}</span>
+        <span id="template-description">{{description}}</span>
+        <span id="template-version">{{version}}</span>
+        <span id="template-endpoints">{{endpoints}}</span>
+        <span id="template-total-endpoints">{{totalEndpoints}}</span>
+        <span id="template-total-categories">{{totalCategories}}</span>
+        <span id="template-generated-at">{{generatedAt}}</span>
+    </div>
+
     <!-- Floating Action Button -->
     <div class="floating-action">
         <button class="btn btn-floating" onclick="scrollToTop()" title="Back to Top">
@@ -468,38 +568,434 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Generate Table of Contents
-        function generateTOC() {
-            const sections = document.querySelectorAll('.section-title');
-            const tocList = document.getElementById('toc-list');
-            
-            sections.forEach((section, index) => {
-                const link = document.createElement('a');
-                link.href = '#' + section.id;
-                link.textContent = section.textContent;
-                link.className = 'toc-link';
-                
-                const li = document.createElement('li');
-                li.appendChild(link);
-                tocList.appendChild(li);
-            });
-        }
-        
-        // Smooth scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+        class ApiViewer {
+            constructor() {
+                this.apiData = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    this.loadData();
+                    this.renderEndpoints();
+                    this.setupEventListeners();
+                    this.hideLoading();
+                } catch (error) {
+                    this.showError('Failed to load API data: ' + error.message);
                 }
-            });
-        });
-        
-        // Scroll to top function
+            }
+
+            loadData() {
+                // Parse data from template elements
+                const title = document.getElementById('template-title').textContent;
+                const description = document.getElementById('template-description').textContent;
+                const version = document.getElementById('template-version').textContent;
+                const endpoints = JSON.parse(document.getElementById('template-endpoints').textContent);
+                const totalEndpoints = parseInt(document.getElementById('template-total-endpoints').textContent);
+                const totalCategories = parseInt(document.getElementById('template-total-categories').textContent);
+                const generatedAt = document.getElementById('template-generated-at').textContent;
+
+                this.apiData = {
+                    info: {
+                        title: title,
+                        description: description,
+                        version: version
+                    },
+                    endpoints: endpoints,
+                    totalEndpoints: totalEndpoints,
+                    totalCategories: totalCategories,
+                    generatedAt: generatedAt
+                };
+                console.log('Loaded API data:', this.apiData);
+            }
+
+            renderEndpoints() {
+                const container = document.getElementById('endpoints-container');
+                container.innerHTML = '';
+
+                if (!this.apiData || !this.apiData.endpoints) {
+                    container.innerHTML = '<div class="text-center py-5"><p class="text-muted">No endpoints found</p></div>';
+                    return;
+                }
+
+                // Group endpoints by file
+                const endpointsByFile = this.groupEndpointsByFile(this.apiData.endpoints);
+                
+                // Render TOC in the sidebar
+                this.renderTOC(endpointsByFile);
+                
+                // Don't render all endpoints initially - only show when selected
+                const contentArea = document.getElementById('endpoints-container');
+                contentArea.innerHTML = '<div class="search-results text-center py-5"><p class="text-muted">Select an endpoint from the sidebar to view details</p></div>';
+
+                // Update statistics
+                this.updateStatistics();
+                
+                // Setup search functionality
+                this.setupSearch();
+            }
+
+            renderTOC(endpointsByFile) {
+                const tocContainer = document.getElementById('toc-list');
+                if (!tocContainer) return;
+
+                console.log('renderTOC called with:', endpointsByFile);
+
+                // endpointsByFile is already grouped by category
+                const categories = {};
+                Object.keys(endpointsByFile).forEach(category => {
+                    const endpoints = endpointsByFile[category];
+                    console.log('Processing category:', category, 'endpoints:', endpoints);
+                    
+                    categories[category] = [];
+                    
+                    endpoints.forEach(endpointData => {
+                        console.log('Processing endpoint:', endpointData);
+                        const endpoint = endpointData.endpoint || endpointData;
+                        categories[category].push({
+                            ...endpoint,
+                            filePath: category,
+                            index: endpointData.index
+                        });
+                    });
+                });
+
+                let tocHTML = '';
+                Object.keys(categories).forEach(category => {
+                    const categoryEndpoints = categories[category];
+                    tocHTML += `
+                        <li class="toc-folder">
+                            <div class="toc-folder-header" onclick="viewer.toggleFolder('${category}')">
+                                <i class="bi bi-folder me-2"></i>
+                                <i class="bi bi-chevron-right folder-arrow" id="arrow-${category}"></i>
+                                <span>${category}</span>
+                                <span class="badge bg-secondary ms-2">${categoryEndpoints.length}</span>
+                            </div>
+                            <ul class="toc-endpoints d-none" id="folder-${category}">
+                                ${categoryEndpoints.map(endpoint => `
+                                    <li>
+                                        <a href="javascript:void(0)" onclick="viewer.showEndpoint('${endpoint.filePath}', ${endpoint.index})" class="toc-endpoint">
+                                            <span class="method-badge method-${endpoint.method.toLowerCase()}">${endpoint.method}</span>
+                                            <span class="endpoint-name">${this.getEndpointDisplayName(endpoint)}</span>
+                                        </a>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </li>
+                    `;
+                });
+
+                tocContainer.innerHTML = tocHTML;
+            }
+
+            getCategoryFromPath(filePath) {
+                // Extract category from path like "test-api\\src\\app\\api\\users\\route.ts" -> "users"
+                console.log('getCategoryFromPath input:', filePath);
+                const pathParts = filePath.split(/[/\\]/);
+                console.log('pathParts:', pathParts);
+                const apiIndex = pathParts.indexOf('api');
+                console.log('apiIndex:', apiIndex);
+                const category = apiIndex !== -1 && apiIndex + 1 < pathParts.length 
+                    ? pathParts[apiIndex + 1] 
+                    : 'api';
+                console.log('category result:', category);
+                return category;
+            }
+
+            getEndpointDisplayName(endpoint) {
+                // Create display name from URL like "/api/users" -> "Get Users"
+                const url = endpoint.url || '';
+                const method = endpoint.method || 'GET';
+                const path = url.replace('/api/', '').replace(/^\//, '');
+                const action = method === 'GET' ? 'Get' : 
+                             method === 'POST' ? 'Create' : 
+                             method === 'PUT' ? 'Update' : 
+                             method === 'DELETE' ? 'Delete' : method;
+                
+                // Safe string manipulation
+                const displayPath = path && path.length > 0 
+                    ? path.charAt(0).toUpperCase() + path.slice(1)
+                    : 'Endpoint';
+                
+                return `${action} ${displayPath}`;
+            }
+
+            toggleFolder(category) {
+                const folder = document.getElementById(`folder-${category}`);
+                const arrow = document.getElementById(`arrow-${category}`);
+                
+                if (folder.classList.contains('d-none')) {
+                    folder.classList.remove('d-none');
+                    arrow.classList.remove('bi-chevron-right');
+                    arrow.classList.add('bi-chevron-down');
+                } else {
+                    folder.classList.add('d-none');
+                    arrow.classList.remove('bi-chevron-down');
+                    arrow.classList.add('bi-chevron-right');
+                }
+            }
+
+            showEndpoint(filePath, endpointIndex) {
+                console.log('showEndpoint called with filePath:', filePath, 'endpointIndex:', endpointIndex);
+                console.log('Available endpoints:', this.apiData.endpoints);
+                
+                // Find the endpoint by array index
+                const endpoint = this.apiData.endpoints[endpointIndex];
+                console.log('Found endpoint:', endpoint);
+                
+                if (!endpoint) {
+                    console.log('Endpoint not found!');
+                    return;
+                }
+
+                // Clear current content and show only this endpoint
+                const container = document.getElementById('endpoints-container');
+                container.innerHTML = '';
+                
+                const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
+                container.appendChild(endpointCard);
+                console.log('Endpoint card added to container');
+            }
+
+            showEndpointFromSearch(endpointIndex) {
+                console.log('showEndpointFromSearch called with index:', endpointIndex);
+                
+                // Find the endpoint by array index
+                const endpoint = this.apiData.endpoints[endpointIndex];
+                console.log('Found endpoint:', endpoint);
+                
+                if (!endpoint) {
+                    console.log('Endpoint not found!');
+                    return;
+                }
+
+                // Clear current content and show only this endpoint
+                const container = document.getElementById('endpoints-container');
+                container.innerHTML = '';
+                
+                const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
+                container.appendChild(endpointCard);
+                console.log('Endpoint card added to container from search');
+            }
+
+            setupSearch() {
+                const searchInput = document.getElementById('searchInput');
+                if (!searchInput) return;
+
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    this.searchEndpoints(query);
+                });
+            }
+
+            searchEndpoints(query) {
+                if (!query) {
+                    // If search is empty, show all categories
+                    this.renderTOC(this.groupEndpointsByFile(this.apiData.endpoints));
+                    return;
+                }
+
+                // Filter endpoints based on search query
+                const filteredEndpoints = this.apiData.endpoints.filter(endpoint => {
+                    const url = (endpoint.url || '').toLowerCase();
+                    const method = (endpoint.method || '').toLowerCase();
+                    const description = (endpoint.description || '').toLowerCase();
+                    const file = (endpoint.file || '').toLowerCase();
+                    
+                    return url.includes(query) || 
+                           method.includes(query) || 
+                           description.includes(query) || 
+                           file.includes(query);
+                });
+
+                // Group filtered endpoints by category
+                const filteredByFile = this.groupEndpointsByFile(filteredEndpoints);
+                
+                // Update TOC with filtered results
+                this.renderTOC(filteredByFile);
+                
+                // Show search results with preview cards
+                this.showSearchResults(filteredEndpoints.length, query, filteredEndpoints);
+            }
+
+            showSearchResults(count, query, filteredEndpoints = []) {
+                const container = document.getElementById('endpoints-container');
+                if (count === 0) {
+                    container.innerHTML = `
+                        <div class="search-results text-center py-5">
+                            <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted mt-3">No results found</h5>
+                            <p class="text-muted">No endpoints match "${query}"</p>
+                        </div>
+                    `;
+                } else {
+                    const previewCards = filteredEndpoints.map((endpoint, index) => {
+                        // Find the original index in the main endpoints array
+                        const originalIndex = this.apiData.endpoints.findIndex(ep => 
+                            ep.url === endpoint.url && ep.method === endpoint.method
+                        );
+                        
+                        return `
+                            <div class="search-preview-card" onclick="viewer.showEndpointFromSearch(${originalIndex})">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">${endpoint.method || 'GET'}</span>
+                                            <span class="endpoint-url">${endpoint.url || ''}</span>
+                                        </div>
+                                        <p class="endpoint-description mb-2">${endpoint.description || 'No description available'}</p>
+                                        <small class="text-muted">File: ${(endpoint.file || '').split(/[/\\]/).pop()}</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); viewer.showEndpointFromSearch(${originalIndex})">
+                                        <i class="bi bi-eye me-1"></i>View Details
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div class="search-results">
+                            <div class="text-center py-3 mb-3">
+                                <p class="text-muted">Found ${count} endpoint${count > 1 ? 's' : ''} matching "${query}"</p>
+                            </div>
+                            <div class="search-preview-grid">
+                                ${previewCards}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            createEndpointCard(endpoint, index) {
+                const card = document.createElement('div');
+                card.className = 'endpoint-card';
+                card.innerHTML = `
+                    <div class="endpoint-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">
+                                    ${endpoint.method || 'GET'}
+                                </span>
+                                <span>${endpoint.url}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="mb-2">
+                            <strong>@api {${endpoint.method.toLowerCase()}}${endpoint.url}</strong> ${endpoint.description || ''}
+                        </div>
+                        
+                        <!-- Responses Section -->
+                        <div class="mt-3">
+                            <h6 class="mb-2">→ Responses</h6>
+                            ${this.renderResponses(endpoint.responses || [], index)}
+                        </div>
+                    </div>
+                `;
+
+                return card;
+            }
+
+            renderResponses(responses, endpointIndex) {
+                if (!responses || (Array.isArray(responses) && responses.length === 0) || (typeof responses === 'object' && Object.keys(responses).length === 0)) {
+                    return '<p class="text-muted small">No responses defined</p>';
+                }
+
+                // Handle both array format and object format from scanner
+                let responsesArray = [];
+                if (Array.isArray(responses)) {
+                    responsesArray = responses;
+                } else if (typeof responses === 'object') {
+                    // Convert object format to array format
+                    responsesArray = Object.keys(responses).map(statusCode => ({
+                        statusCode: statusCode,
+                        description: responses[statusCode].description || '',
+                        example: responses[statusCode].example || {}
+                    }));
+                }
+
+                return responsesArray.map((response, responseIndex) => `
+                    <div class="response-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="response-status">${response.statusCode} - ${response.description || 'Response'}</span>
+                            </div>
+                        </div>
+                        <div class="response-example">
+                            ${typeof response.example === 'object' ? JSON.stringify(response.example, null, 2) : (response.example || 'No example provided')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            setupEventListeners() {
+                // No editing functionality in view mode
+            }
+
+            hideLoading() {
+                document.getElementById('loading-state').classList.add('d-none');
+                document.getElementById('endpoints-container').classList.remove('d-none');
+                document.getElementById('stats-container').classList.remove('d-none');
+            }
+
+            updateStatistics() {
+                if (!this.apiData) return;
+
+                // Update total endpoints
+                document.getElementById('total-endpoints').textContent = this.apiData.endpoints.length;
+
+                // Update total categories
+                const categories = new Set();
+                this.apiData.endpoints.forEach(endpoint => {
+                    const urlPath = endpoint.url || '';
+                    const category = urlPath.split('/')[2] || 'api';
+                    categories.add(category);
+                });
+                document.getElementById('total-categories').textContent = categories.size;
+
+                // Update version
+                if (this.apiData.info && this.apiData.info.version) {
+                    document.getElementById('api-version').textContent = `v${this.apiData.info.version}`;
+                }
+
+                // Update generated date
+                const today = new Date();
+                const dateString = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+                document.getElementById('generated-date').textContent = dateString;
+            }
+
+            showError(message) {
+                document.getElementById('loading-state').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+                        <h5 class="text-danger">Error</h5>
+                        <p class="text-muted">${message}</p>
+                        <button class="btn btn-primary" onclick="location.reload()">
+                            <i class="fas fa-refresh me-1"></i>
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+
+            groupEndpointsByFile(endpoints) {
+                const grouped = {};
+                endpoints.forEach((endpoint, index) => {
+                    // Extract category from URL path (e.g., /api/users -> users)
+                    const urlPath = endpoint.url || '';
+                    const category = urlPath.split('/')[2] || 'api'; // Get the category part
+                    
+                    if (!grouped[category]) {
+                        grouped[category] = [];
+                    }
+                    grouped[category].push({ endpoint, index });
+                });
+                return grouped;
+            }
+        }
+
+        // Global function for scroll to top
         function scrollToTop() {
             window.scrollTo({
                 top: 0,
@@ -507,51 +1003,9 @@
             });
         }
         
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            generateTOC();
-            
-            // Add animation to cards on scroll (with fallback)
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
-            };
-            
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, observerOptions);
-            
-            // Initialize cards with animation
-            const cards = document.querySelectorAll('.section-card, .endpoint-card');
-            cards.forEach(card => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                observer.observe(card);
-            });
-            
-            // Fallback: if IntersectionObserver is not supported, show all cards immediately
-            if (!window.IntersectionObserver) {
-                cards.forEach(card => {
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                });
-            }
-            
-            // Additional fallback: show cards after a delay if they're still hidden
-            setTimeout(() => {
-                cards.forEach(card => {
-                    if (card.style.opacity === '0') {
-                        card.style.opacity = '1';
-                        card.style.transform = 'translateY(0)';
-                    }
-                });
-            }, 2000);
+        // Initialize viewer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.viewer = new ApiViewer();
         });
     </script>
 </body>

@@ -10,13 +10,13 @@ Next.js API route scanner that automatically generates API documentation from yo
 ## Features
 
 - 🔍 **Automatic Discovery**: Scans your `/api` directory for route files
-- 📝 **Multiple Formats**: Output in JSON, Markdown, Swagger/OpenAPI, or beautiful HTML format
-- 🌐 **Interactive HTML**: Auto-opening, responsive HTML documentation with Bootstrap UI
+- 📝 **Multiple Formats**: JSON, Markdown, Swagger/OpenAPI, HTML, and Editor formats
+- 🌐 **Interactive HTML**: Auto-opening, responsive documentation with Bootstrap UI
+- ✏️ **Editor Mode**: Interactive API documentation editor with hierarchical TOC and real-time search
 - 🚀 **Next.js App Router**: Supports the new App Router structure (`src/app/api/`)
 - 🔧 **Configurable**: Customize scanning behavior with config files
 - 📊 **Rich Metadata**: Extracts parameters, responses, and descriptions
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
-- 🎨 **Beautiful UI**: Modern, responsive HTML documentation with Collab UI-inspired dark theme, animations and search
 
 ## Installation
 
@@ -46,6 +46,9 @@ npx api-scanner --format markdown --output api-docs.md
 
 # 🌐 Generate beautiful HTML documentation (auto-opens in browser)
 npx api-scanner --format html --output api-docs.html
+
+# ✏️ Generate interactive editor mode
+npx api-scanner --format editor --output editor.html
 
 # 🚫 Generate HTML without auto-opening
 npx api-scanner --format html --output api-docs.html --no-open
@@ -90,7 +93,7 @@ await htmlScanner.generateDocumentation();
 |--------|-------------|---------|
 | `-p, --path <path>` | Path to scan for API routes | `src/app/api` |
 | `-o, --output <file>` | Output file path | `api-documentation.json` |
-| `-f, --format <format>` | Output format (json, markdown, swagger, html) | `json` |
+| `-f, --format <format>` | Output format (json, markdown, swagger, html, editor) | `json` |
 | `-v, --verbose` | Enable verbose output | `false` |
 | `-c, --config <file>` | Configuration file path | `.api-scanner.json` |
 | `-i, --interactive` | Run in interactive mode | `false` |
@@ -246,34 +249,26 @@ Get issues by workspace/project
 
 ### HTML Format
 
-The HTML format generates a beautiful, interactive documentation website with:
+Beautiful, interactive documentation website with modern Bootstrap UI, dark theme, and responsive design.
 
-- 🎨 **Modern Bootstrap UI**: Responsive design with Collab UI-inspired dark theme
-- 🌙 **Dark Theme**: Professional dark color scheme with white text for better readability
-- 📱 **Mobile-friendly**: Works perfectly on all devices
-- 🔍 **Interactive Features**: Table of contents, smooth scrolling, search
-- 🎭 **Animations**: Scroll-triggered animations for better UX
-- 📊 **Statistics**: Endpoint counts, categories, and generation info
-- 🌐 **Auto-open**: Automatically opens in your default browser
-- 🎯 **Categorized**: Endpoints grouped by tags/categories
-- 💎 **Compact Design**: Reduced padding and spacing for better information density
+### Editor Format
+
+Interactive API documentation editor with hierarchical TOC, real-time search, and dynamic endpoint display.
 
 ```bash
 # Generate HTML documentation
 npx api-scanner --format html --output api-docs.html
 
-# The generated HTML includes:
-# - Responsive Bootstrap 5.3.0 design with Collab UI-inspired dark theme
-# - Professional dark color scheme with white text
-# - Bootstrap Icons for better visual appeal
-# - Interactive table of contents
-# - Smooth scroll animations
-# - Method badges (GET, POST, PUT, DELETE, PATCH)
-# - Parameter tables with required/optional indicators and dark backgrounds
-# - Response examples with syntax highlighting
-# - File path information for each endpoint
-# - Compact design with reduced padding for better information density
+# Generate interactive editor
+npx api-scanner --format editor --output editor.html
 ```
+
+## Editor Mode Features
+
+- **Hierarchical TOC**: Postman-like collapsible folder structure
+- **Real-time Search**: Search endpoints by path, method, or description
+- **Dynamic Display**: Click to view specific endpoint details
+- **Modern UI**: Bootstrap 5.3.0 with dark theme and smooth animations
 
 ## Supported Route Patterns
 
@@ -363,11 +358,8 @@ export async function GET(
 # Generate beautiful HTML documentation
 npx api-scanner --format html --output docs/api-docs.html
 
-# The HTML file is self-contained and can be:
-# - Served from any web server
-# - Hosted on GitHub Pages
-# - Shared directly with team members
-# - Integrated into your project's documentation site
+# Generate interactive editor
+npx api-scanner --format editor --output docs/editor.html
 ```
 
 ### With Swagger UI
@@ -397,12 +389,13 @@ npx api-scanner --format swagger --output openapi.json
   run: |
     npm install api-scanner
     npx api-scanner --format html --output docs/api-docs.html
+    npx api-scanner --format editor --output docs/editor.html
     npx api-scanner --format swagger --output docs/openapi.json
 
 - name: Deploy Documentation
   run: |
-    # Deploy HTML docs to GitHub Pages or your hosting service
     cp docs/api-docs.html public/
+    cp docs/editor.html public/
 ```
 
 ### Custom Templates
