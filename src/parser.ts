@@ -247,10 +247,29 @@ export class Parser {
       for (const match of responseMatches) {
         const responseMatch = match.match(/@response\s+(\d+)\s+(.+)/i);
         if (responseMatch) {
+          const fullDescription = responseMatch[2].trim();
+          
+          // Try to extract JSON example from description
+          let example = {};
+          let description = fullDescription;
+          
+          // Look for JSON pattern in description
+          const jsonMatch = fullDescription.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              example = JSON.parse(jsonMatch[0]);
+              // Remove JSON from description
+              description = fullDescription.replace(/\{[\s\S]*\}/, '').trim();
+            } catch (e) {
+              // If JSON parsing fails, keep the original description
+              description = fullDescription;
+            }
+          }
+          
           responses[responseMatch[1]] = {
             statusCode: responseMatch[1],
-            description: responseMatch[2].trim(),
-            example: {}
+            description: description,
+            example: example
           };
         }
       }
