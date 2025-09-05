@@ -23,7 +23,10 @@ class ApiEditor {
         }
         this.apiData = await response.json();
         console.log('Loaded API data:', this.apiData);
-        console.log('First endpoint:', this.apiData?.endpoints?.[0]);
+        console.log('Endpoints:', this.apiData?.endpoints);
+        if (this.apiData?.endpoints) {
+            console.log('First endpoint:', this.apiData.endpoints[0]);
+        }
     }
 
     renderEndpoints() {
@@ -38,18 +41,264 @@ class ApiEditor {
         // Group endpoints by file
         const endpointsByFile = this.groupEndpointsByFile(this.apiData.endpoints);
         
-        // Create file buttons
-        const fileButtons = this.createFileButtons(endpointsByFile);
-        container.innerHTML = fileButtons;
+        // Render TOC in the sidebar
+        this.renderTOC(endpointsByFile);
+        
+        // Create layout with sidebar and main content
+        container.innerHTML = `
+            <div class="row">
+                <div class="col-lg-1 col-md-2">
+                    <!-- TOC will be populated by JavaScript -->
+                </div>
+                <div class="col-lg-16 col-md-16">
+                    <div id="endpoints-content">
+                        <!-- Endpoints will be added here -->
+                    </div>
+                </div>
+            </div>
+        `;
 
-        // Add endpoint cards
-        this.apiData.endpoints.forEach((endpoint, index) => {
-            const endpointCard = this.createEndpointCard(endpoint, index);
-            container.appendChild(endpointCard);
-        });
+        // Don't render all endpoints initially - only show when selected
+        const contentArea = document.getElementById('endpoints-content');
+        contentArea.innerHTML = '<div class="search-results text-center py-5"><p class="text-muted">Select an endpoint from the sidebar to view details</p></div>';
 
         // Update statistics
         this.updateStatistics();
+        
+        // Setup search functionality
+        this.setupSearch();
+    }
+
+    renderTOC(endpointsByFile) {
+        const tocContainer = document.getElementById('toc-list');
+        if (!tocContainer) return;
+
+        console.log('renderTOC called with:', endpointsByFile);
+
+        // endpointsByFile is already grouped by category
+        const categories = {};
+        Object.keys(endpointsByFile).forEach(category => {
+            const endpoints = endpointsByFile[category];
+            console.log('Processing category:', category, 'endpoints:', endpoints);
+            
+            categories[category] = [];
+            
+            endpoints.forEach(endpointData => {
+                console.log('Processing endpoint:', endpointData);
+                const endpoint = endpointData.endpoint || endpointData;
+                categories[category].push({
+                    ...endpoint,
+                    filePath: category,
+                    index: endpointData.index
+                });
+            });
+        });
+
+        let tocHTML = '';
+        Object.keys(categories).forEach(category => {
+            const categoryEndpoints = categories[category];
+            tocHTML += `
+                <li class="toc-folder">
+                    <div class="toc-folder-header" onclick="editor.toggleFolder('${category}')">
+                        <i class="bi bi-folder me-2"></i>
+                        <i class="bi bi-chevron-right folder-arrow" id="arrow-${category}"></i>
+                        <span>${category}</span>
+                        <span class="badge bg-secondary ms-2">${categoryEndpoints.length}</span>
+                    </div>
+                    <ul class="toc-endpoints d-none" id="folder-${category}">
+                        ${categoryEndpoints.map(endpoint => `
+                            <li>
+                                <a href="javascript:void(0)" onclick="editor.showEndpoint('${endpoint.filePath}', ${endpoint.index})" class="toc-endpoint">
+                                    <span class="method-badge method-${endpoint.method.toLowerCase()}">${endpoint.method}</span>
+                                    <span class="endpoint-name">${this.getEndpointDisplayName(endpoint)}</span>
+                                </a>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </li>
+            `;
+        });
+
+        tocContainer.innerHTML = tocHTML;
+    }
+
+    getCategoryFromPath(filePath) {
+        // Extract category from path like "test-api\\src\\app\\api\\users\\route.ts" -> "users"
+        console.log('getCategoryFromPath input:', filePath);
+        const pathParts = filePath.split(/[/\\]/);
+        console.log('pathParts:', pathParts);
+        const apiIndex = pathParts.indexOf('api');
+        console.log('apiIndex:', apiIndex);
+        const category = apiIndex !== -1 && apiIndex + 1 < pathParts.length 
+            ? pathParts[apiIndex + 1] 
+            : 'api';
+        console.log('category result:', category);
+        return category;
+    }
+
+    getEndpointDisplayName(endpoint) {
+        // Create display name from URL like "/api/users" -> "Get Users"
+        const url = endpoint.url || '';
+        const method = endpoint.method || 'GET';
+        const path = url.replace('/api/', '').replace(/^\//, '');
+        const action = method === 'GET' ? 'Get' : 
+                     method === 'POST' ? 'Create' : 
+                     method === 'PUT' ? 'Update' : 
+                     method === 'DELETE' ? 'Delete' : method;
+        
+        // Safe string manipulation
+        const displayPath = path && path.length > 0 
+            ? path.charAt(0).toUpperCase() + path.slice(1)
+            : 'Endpoint';
+        
+        return `${action} ${displayPath}`;
+    }
+
+    toggleFolder(category) {
+        const folder = document.getElementById(`folder-${category}`);
+        const arrow = document.getElementById(`arrow-${category}`);
+        
+        if (folder.classList.contains('d-none')) {
+            folder.classList.remove('d-none');
+            arrow.classList.remove('bi-chevron-right');
+            arrow.classList.add('bi-chevron-down');
+        } else {
+            folder.classList.add('d-none');
+            arrow.classList.remove('bi-chevron-down');
+            arrow.classList.add('bi-chevron-right');
+        }
+    }
+
+    showEndpoint(filePath, endpointIndex) {
+        console.log('showEndpoint called with filePath:', filePath, 'endpointIndex:', endpointIndex);
+        console.log('Available endpoints:', this.apiData.endpoints);
+        
+        // Find the endpoint by array index
+        const endpoint = this.apiData.endpoints[endpointIndex];
+        console.log('Found endpoint:', endpoint);
+        
+        if (!endpoint) {
+            console.log('Endpoint not found!');
+            return;
+        }
+
+        // Clear current content and show only this endpoint
+        const container = document.getElementById('endpoints-content');
+        container.innerHTML = '';
+        
+        const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
+        container.appendChild(endpointCard);
+        console.log('Endpoint card added to container');
+    }
+
+    showEndpointFromSearch(endpointIndex) {
+        console.log('showEndpointFromSearch called with index:', endpointIndex);
+        
+        // Find the endpoint by array index
+        const endpoint = this.apiData.endpoints[endpointIndex];
+        console.log('Found endpoint:', endpoint);
+        
+        if (!endpoint) {
+            console.log('Endpoint not found!');
+            return;
+        }
+
+        // Clear current content and show only this endpoint
+        const container = document.getElementById('endpoints-content');
+        container.innerHTML = '';
+        
+        const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
+        container.appendChild(endpointCard);
+        console.log('Endpoint card added to container from search');
+    }
+
+    setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            this.searchEndpoints(query);
+        });
+    }
+
+    searchEndpoints(query) {
+        if (!query) {
+            // If search is empty, show all categories
+            this.renderTOC(this.groupEndpointsByFile(this.apiData.endpoints));
+            return;
+        }
+
+        // Filter endpoints based on search query
+        const filteredEndpoints = this.apiData.endpoints.filter(endpoint => {
+            const url = (endpoint.url || '').toLowerCase();
+            const method = (endpoint.method || '').toLowerCase();
+            const description = (endpoint.description || '').toLowerCase();
+            const file = (endpoint.file || '').toLowerCase();
+            
+            return url.includes(query) || 
+                   method.includes(query) || 
+                   description.includes(query) || 
+                   file.includes(query);
+        });
+
+        // Group filtered endpoints by category
+        const filteredByFile = this.groupEndpointsByFile(filteredEndpoints);
+        
+        // Update TOC with filtered results
+        this.renderTOC(filteredByFile);
+        
+        // Show search results with preview cards
+        this.showSearchResults(filteredEndpoints.length, query, filteredEndpoints);
+    }
+
+    showSearchResults(count, query, filteredEndpoints = []) {
+        const container = document.getElementById('endpoints-content');
+        if (count === 0) {
+            container.innerHTML = `
+                <div class="search-results text-center py-5">
+                    <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted mt-3">No results found</h5>
+                    <p class="text-muted">No endpoints match "${query}"</p>
+                </div>
+            `;
+        } else {
+            const previewCards = filteredEndpoints.map((endpoint, index) => {
+                // Find the original index in the main endpoints array
+                const originalIndex = this.apiData.endpoints.findIndex(ep => 
+                    ep.url === endpoint.url && ep.method === endpoint.method
+                );
+                
+                return `
+                    <div class="search-preview-card" onclick="editor.showEndpointFromSearch(${originalIndex})">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">${endpoint.method || 'GET'}</span>
+                                    <span class="endpoint-url">${endpoint.url || ''}</span>
+                                </div>
+                                <p class="endpoint-description mb-2">${endpoint.description || 'No description available'}</p>
+                                <small class="text-muted">File: ${(endpoint.file || '').split(/[/\\]/).pop()}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editor.showEndpointFromSearch(${originalIndex})">
+                                <i class="bi bi-eye me-1"></i>View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="search-results">
+                    <div class="text-center py-3 mb-3">
+                        <p class="text-muted">Found ${count} endpoint${count > 1 ? 's' : ''} matching "${query}"</p>
+                    </div>
+                    <div class="search-preview-grid">
+                        ${previewCards}
+                    </div>
+                </div>
+            `;
+        }
     }
 
     createEndpointCard(endpoint, index) {
@@ -59,8 +308,8 @@ class ApiEditor {
             <div class="endpoint-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <span class="method-badge method-${endpoint.method.toLowerCase()} me-2">
-                            ${endpoint.method}
+                        <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">
+                            ${endpoint.method || 'GET'}
                         </span>
                         <span>${endpoint.url}</span>
                     </div>
@@ -169,17 +418,6 @@ class ApiEditor {
                 const endpointIndex = parseInt(btn.getAttribute('data-endpoint-index'));
                 const responseIndex = parseInt(btn.getAttribute('data-response-index'));
                 this.cancelEditing(endpointIndex, responseIndex);
-            }
-        });
-
-
-
-        // File buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.file-btn')) {
-                const btn = e.target.closest('.file-btn');
-                const firstEndpointIndex = btn.getAttribute('data-first-endpoint');
-                this.scrollToEndpoint(firstEndpointIndex);
             }
         });
 
@@ -312,7 +550,7 @@ class ApiEditor {
     hideLoading() {
         document.getElementById('loading-state').classList.add('d-none');
         document.getElementById('endpoints-container').classList.remove('d-none');
-        document.getElementById('stats-container').style.display = 'block';
+        document.getElementById('stats-container').classList.remove('d-none');
     }
 
     updateStatistics() {
@@ -389,55 +627,7 @@ class ApiEditor {
         return grouped;
     }
 
-    createFileButtons(endpointsByFile) {
-        const categories = Object.keys(endpointsByFile);
-        console.log('Categories found:', categories);
-        console.log('Endpoints by category:', endpointsByFile);
-        if (categories.length <= 1) return '';
 
-        const buttons = categories.map(category => {
-            const endpointCount = endpointsByFile[category].length;
-            const firstEndpointIndex = endpointsByFile[category][0].index;
-            
-            return `
-                <li>
-                    <a href="#" class="file-btn" 
-                       data-category="${category}" 
-                       data-first-endpoint="${firstEndpointIndex}">
-                        ${category}
-                    </a>
-                </li>
-            `;
-        }).join('');
-
-        return `
-            <div class="file-buttons-container">
-                <h6>
-                    <i class="fas fa-list-ul me-2"></i>
-                    Table of Contents
-                </h6>
-                <ul class="file-buttons">
-                    ${buttons}
-                </ul>
-            </div>
-        `;
-    }
-
-    scrollToEndpoint(endpointIndex) {
-        const endpointCards = document.querySelectorAll('.endpoint-card');
-        if (endpointCards[endpointIndex]) {
-            endpointCards[endpointIndex].scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
-            
-            // Highlight the endpoint briefly
-            endpointCards[endpointIndex].style.border = '2px solid var(--accent-blue)';
-            setTimeout(() => {
-                endpointCards[endpointIndex].style.border = '';
-            }, 2000);
-        }
-    }
 }
 
 // Global function for scroll to top
@@ -450,5 +640,5 @@ function scrollToTop() {
 
 // Initialize editor when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new ApiEditor();
+    window.editor = new ApiEditor();
 });
