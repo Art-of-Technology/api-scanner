@@ -214,12 +214,51 @@ class ApiEditor {
 
     setupSearch() {
         const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const searchBtn = document.getElementById('searchBtn');
+        
         if (!searchInput) return;
 
+        // Input event listener
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
             this.searchEndpoints(query);
+            this.toggleClearButton(query);
         });
+
+        // Enter key listener
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = e.target.value.toLowerCase().trim();
+                this.searchEndpoints(query);
+            }
+        });
+
+        // Clear button listener
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                this.searchEndpoints('');
+                this.toggleClearButton('');
+                searchInput.focus();
+            });
+        }
+
+        // Search button listener
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => {
+                const query = searchInput.value.toLowerCase().trim();
+                this.searchEndpoints(query);
+            });
+        }
+    }
+
+    toggleClearButton(query) {
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) {
+            clearBtn.style.display = query ? 'block' : 'none';
+        }
     }
 
     searchEndpoints(query) {
@@ -320,6 +359,22 @@ class ApiEditor {
                     <strong>@api {${endpoint.method.toLowerCase()}}${endpoint.url}</strong> ${endpoint.description || ''}
                 </div>
                 
+                <!-- Request Headers Section -->
+                ${endpoint.requestHeaders && endpoint.requestHeaders.length > 0 ? `
+                <div class="mt-3">
+                    <h6 class="mb-2">→ Request Headers</h6>
+                    ${this.renderRequestHeaders(endpoint.requestHeaders, index)}
+                </div>
+                ` : ''}
+                
+                <!-- Request Body Section -->
+                ${endpoint.requestBody ? `
+                <div class="mt-3">
+                    <h6 class="mb-2">→ Request Body</h6>
+                    ${this.renderRequestBody(endpoint.requestBody, index)}
+                </div>
+                ` : ''}
+                
                 <!-- Responses Section -->
                 <div class="mt-3">
                     <h6 class="mb-2">→ Responses</h6>
@@ -390,14 +445,120 @@ class ApiEditor {
         `).join('');
     }
 
+    renderRequestHeaders(headers, endpointIndex) {
+        if (!headers || headers.length === 0) {
+            return '<p class="text-muted small">No request headers defined</p>';
+        }
+
+        return headers.map((header, headerIndex) => `
+            <div class="response-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="response-status">${header.name}</span>
+                        ${header.required ? '<span class="badge bg-danger ms-2">Required</span>' : '<span class="badge bg-secondary ms-2">Optional</span>'}
+                    </div>
+                    <div>
+                        <button class="edit-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-header-index="${headerIndex}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="response-example clickable-response" 
+                     id="header-${endpointIndex}-${headerIndex}"
+                     data-endpoint-index="${endpointIndex}" 
+                     data-header-index="${headerIndex}">
+                    ${header.description || 'No description available'}
+                </div>
+                <div class="d-none" id="editor-header-${endpointIndex}-${headerIndex}">
+                    <textarea class="json-editor" rows="3">${header.description || ''}</textarea>
+                    <div class="mt-2">
+                        <button class="save-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-header-index="${headerIndex}">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <button class="cancel-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-header-index="${headerIndex}">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderRequestBody(requestBody, endpointIndex) {
+        if (!requestBody) {
+            return '<p class="text-muted small">No request body defined</p>';
+        }
+
+        return `
+            <div class="response-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="response-status">${requestBody.type || 'application/json'}</span>
+                    </div>
+                    <div>
+                        <button class="edit-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-body-index="0">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="response-example clickable-response" 
+                     id="body-${endpointIndex}-0"
+                     data-endpoint-index="${endpointIndex}" 
+                     data-body-index="0">
+                    ${requestBody.description || 'Request body for this endpoint'}
+                </div>
+                ${requestBody.example ? `
+                <div class="mt-2">
+                    <strong>Example:</strong>
+                    <div class="response-example mt-1">
+                        ${typeof requestBody.example === 'object' ? JSON.stringify(requestBody.example, null, 2) : requestBody.example}
+                    </div>
+                </div>
+                ` : ''}
+                <div class="d-none" id="editor-body-${endpointIndex}-0">
+                    <textarea class="json-editor" rows="6">${requestBody.description || ''}</textarea>
+                    <div class="mt-2">
+                        <button class="save-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-body-index="0">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <button class="cancel-btn" 
+                                data-endpoint-index="${endpointIndex}" 
+                                data-body-index="0">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     setupEventListeners() {
         // Edit buttons
         document.addEventListener('click', (e) => {
             if (e.target.closest('.edit-btn')) {
                 const btn = e.target.closest('.edit-btn');
                 const endpointIndex = parseInt(btn.getAttribute('data-endpoint-index'));
-                const responseIndex = parseInt(btn.getAttribute('data-response-index'));
-                this.startEditing(endpointIndex, responseIndex);
+                const responseIndex = btn.getAttribute('data-response-index');
+                const headerIndex = btn.getAttribute('data-header-index');
+                const bodyIndex = btn.getAttribute('data-body-index');
+                
+                if (responseIndex !== null) {
+                    this.startEditing(endpointIndex, parseInt(responseIndex));
+                } else if (headerIndex !== null) {
+                    this.startEditingHeader(endpointIndex, parseInt(headerIndex));
+                } else if (bodyIndex !== null) {
+                    this.startEditingBody(endpointIndex, parseInt(bodyIndex));
+                }
             }
         });
 
@@ -406,8 +567,17 @@ class ApiEditor {
             if (e.target.closest('.save-btn')) {
                 const btn = e.target.closest('.save-btn');
                 const endpointIndex = parseInt(btn.getAttribute('data-endpoint-index'));
-                const responseIndex = parseInt(btn.getAttribute('data-response-index'));
-                this.saveResponse(endpointIndex, responseIndex);
+                const responseIndex = btn.getAttribute('data-response-index');
+                const headerIndex = btn.getAttribute('data-header-index');
+                const bodyIndex = btn.getAttribute('data-body-index');
+                
+                if (responseIndex !== null) {
+                    this.saveResponse(endpointIndex, parseInt(responseIndex));
+                } else if (headerIndex !== null) {
+                    this.saveHeader(endpointIndex, parseInt(headerIndex));
+                } else if (bodyIndex !== null) {
+                    this.saveBody(endpointIndex, parseInt(bodyIndex));
+                }
             }
         });
 
@@ -416,8 +586,17 @@ class ApiEditor {
             if (e.target.closest('.cancel-btn')) {
                 const btn = e.target.closest('.cancel-btn');
                 const endpointIndex = parseInt(btn.getAttribute('data-endpoint-index'));
-                const responseIndex = parseInt(btn.getAttribute('data-response-index'));
-                this.cancelEditing(endpointIndex, responseIndex);
+                const responseIndex = btn.getAttribute('data-response-index');
+                const headerIndex = btn.getAttribute('data-header-index');
+                const bodyIndex = btn.getAttribute('data-body-index');
+                
+                if (responseIndex !== null) {
+                    this.cancelEditing(endpointIndex, parseInt(responseIndex));
+                } else if (headerIndex !== null) {
+                    this.cancelEditingHeader(endpointIndex, parseInt(headerIndex));
+                } else if (bodyIndex !== null) {
+                    this.cancelEditingBody(endpointIndex, parseInt(bodyIndex));
+                }
             }
         });
 
@@ -426,24 +605,49 @@ class ApiEditor {
             if (e.target.closest('.clickable-response')) {
                 const responseDiv = e.target.closest('.clickable-response');
                 const endpointIndex = parseInt(responseDiv.getAttribute('data-endpoint-index'));
-                const responseIndex = parseInt(responseDiv.getAttribute('data-response-index'));
-                this.startEditing(endpointIndex, responseIndex);
+                const responseIndex = responseDiv.getAttribute('data-response-index');
+                const headerIndex = responseDiv.getAttribute('data-header-index');
+                const bodyIndex = responseDiv.getAttribute('data-body-index');
+                
+                if (responseIndex !== null) {
+                    this.startEditing(endpointIndex, parseInt(responseIndex));
+                } else if (headerIndex !== null) {
+                    this.startEditingHeader(endpointIndex, parseInt(headerIndex));
+                } else if (bodyIndex !== null) {
+                    this.startEditingBody(endpointIndex, parseInt(bodyIndex));
+                }
             }
         });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             // ESC key to cancel editing
-            if (e.key === 'Escape' && this.editingResponse) {
-                const { endpointIndex, responseIndex } = this.editingResponse;
-                this.cancelEditing(endpointIndex, responseIndex);
+            if (e.key === 'Escape') {
+                if (this.editingResponse) {
+                    const { endpointIndex, responseIndex } = this.editingResponse;
+                    this.cancelEditing(endpointIndex, responseIndex);
+                } else if (this.editingHeader) {
+                    const { endpointIndex, headerIndex } = this.editingHeader;
+                    this.cancelEditingHeader(endpointIndex, headerIndex);
+                } else if (this.editingBody) {
+                    const { endpointIndex, bodyIndex } = this.editingBody;
+                    this.cancelEditingBody(endpointIndex, bodyIndex);
+                }
             }
             
             // Ctrl+S to save
-            if (e.ctrlKey && e.key === 's' && this.editingResponse) {
+            if (e.ctrlKey && e.key === 's') {
                 e.preventDefault(); // Prevent browser save dialog
-                const { endpointIndex, responseIndex } = this.editingResponse;
-                this.saveResponse(endpointIndex, responseIndex);
+                if (this.editingResponse) {
+                    const { endpointIndex, responseIndex } = this.editingResponse;
+                    this.saveResponse(endpointIndex, responseIndex);
+                } else if (this.editingHeader) {
+                    const { endpointIndex, headerIndex } = this.editingHeader;
+                    this.saveHeader(endpointIndex, headerIndex);
+                } else if (this.editingBody) {
+                    const { endpointIndex, bodyIndex } = this.editingBody;
+                    this.saveBody(endpointIndex, bodyIndex);
+                }
             }
         });
     }
@@ -544,6 +748,136 @@ class ApiEditor {
         } catch (error) {
             console.error('Save error:', error);
             this.showToast('Failed to save response: ' + error.message, 'error');
+        }
+    }
+
+    // Request Header editing methods
+    startEditingHeader(endpointIndex, headerIndex) {
+        const display = document.getElementById(`header-${endpointIndex}-${headerIndex}`);
+        const editor = document.getElementById(`editor-header-${endpointIndex}-${headerIndex}`);
+        
+        if (display && editor) {
+            display.classList.add('d-none');
+            editor.classList.remove('d-none');
+            
+            // Set editing state
+            this.editingHeader = { endpointIndex, headerIndex };
+            
+            // Focus the textarea
+            const textarea = editor.querySelector('.json-editor');
+            if (textarea) {
+                textarea.focus();
+            }
+        }
+    }
+
+    cancelEditingHeader(endpointIndex, headerIndex) {
+        const display = document.getElementById(`header-${endpointIndex}-${headerIndex}`);
+        const editor = document.getElementById(`editor-header-${endpointIndex}-${headerIndex}`);
+        
+        if (display && editor) {
+            editor.classList.add('d-none');
+            display.classList.remove('d-none');
+            
+            // Clear editing state
+            this.editingHeader = null;
+        }
+    }
+
+    async saveHeader(endpointIndex, headerIndex) {
+        try {
+            const editor = document.getElementById(`editor-header-${endpointIndex}-${headerIndex}`);
+            const textarea = editor.querySelector('.json-editor');
+            const newDescription = textarea.value;
+
+            console.log('Saving header:', { endpointIndex, headerIndex, newDescription });
+
+            // Update the data
+            if (this.apiData && this.apiData.endpoints[endpointIndex] && this.apiData.endpoints[endpointIndex].requestHeaders) {
+                this.apiData.endpoints[endpointIndex].requestHeaders[headerIndex].description = newDescription;
+            }
+
+            // Update the display
+            const display = document.getElementById(`header-${endpointIndex}-${headerIndex}`);
+            display.textContent = newDescription || 'No description available';
+            
+            // Hide editor and show display
+            this.cancelEditingHeader(endpointIndex, headerIndex);
+            
+            this.showToast('Header description saved successfully!', 'success');
+        } catch (error) {
+            console.error('Save header error:', error);
+            this.showToast('Failed to save header: ' + error.message, 'error');
+        }
+    }
+
+    // Request Body editing methods
+    startEditingBody(endpointIndex, bodyIndex) {
+        const display = document.getElementById(`body-${endpointIndex}-${bodyIndex}`);
+        const editor = document.getElementById(`editor-body-${endpointIndex}-${bodyIndex}`);
+        
+        if (display && editor) {
+            display.classList.add('d-none');
+            editor.classList.remove('d-none');
+            
+            // Set editing state
+            this.editingBody = { endpointIndex, bodyIndex };
+            
+            // Focus the textarea
+            const textarea = editor.querySelector('.json-editor');
+            if (textarea) {
+                textarea.focus();
+            }
+        }
+    }
+
+    cancelEditingBody(endpointIndex, bodyIndex) {
+        const display = document.getElementById(`body-${endpointIndex}-${bodyIndex}`);
+        const editor = document.getElementById(`editor-body-${endpointIndex}-${bodyIndex}`);
+        
+        if (display && editor) {
+            editor.classList.add('d-none');
+            display.classList.remove('d-none');
+            
+            // Clear editing state
+            this.editingBody = null;
+        }
+    }
+
+    async saveBody(endpointIndex, bodyIndex) {
+        try {
+            const editor = document.getElementById(`editor-body-${endpointIndex}-${bodyIndex}`);
+            const textarea = editor.querySelector('.json-editor');
+            let newDescription = textarea.value;
+
+            console.log('Saving body:', { endpointIndex, bodyIndex, newDescription });
+
+            // Try to parse as JSON if it looks like JSON
+            try {
+                if (newDescription.trim().startsWith('{') || newDescription.trim().startsWith('[')) {
+                    const parsedJson = JSON.parse(newDescription);
+                    newDescription = JSON.stringify(parsedJson, null, 2);
+                }
+            } catch (e) {
+                // Keep as string if not valid JSON
+            }
+
+            // Update the data
+            if (this.apiData && this.apiData.endpoints[endpointIndex] && this.apiData.endpoints[endpointIndex].requestBody) {
+                this.apiData.endpoints[endpointIndex].requestBody.description = newDescription;
+            }
+
+            // Update the display
+            const display = document.getElementById(`body-${endpointIndex}-${bodyIndex}`);
+            display.textContent = newDescription || 'Request body for this endpoint';
+            
+            // Hide editor and show display
+            this.cancelEditingBody(endpointIndex, bodyIndex);
+            
+            this.showToast('Request body saved successfully!', 'success');
+        } catch (error) {
+            console.error('Save body error:', error);
+            this.showToast('Failed to save request body: ' + error.message, 'error');
         }
     }
 

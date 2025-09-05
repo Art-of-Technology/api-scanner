@@ -568,8 +568,16 @@
             </span>
             <div class="navbar-nav ms-auto d-flex align-items-center">
                 <!-- Search Bar -->
-                <div class="nav-item me-3">
-                    <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control form-control-sm" style="width: 250px;">
+                <div class="nav-item me-3 position-relative">
+                    <div class="input-group" style="width: 280px;">
+                        <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control form-control-sm">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="clearSearchBtn" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-primary btn-sm" type="button" id="searchBtn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

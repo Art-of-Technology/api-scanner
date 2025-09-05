@@ -1,4 +1,4 @@
-import { ParsedRoute, ApiEndpoint, ApiParameter, ApiResponse } from './types';
+import { ParsedRoute, ApiEndpoint, ApiParameter, ApiResponse, ApiRequestHeader, ApiRequestBody } from './types';
 
 export class Parser {
   private httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
@@ -43,6 +43,12 @@ export class Parser {
     // Extract responses
     const responses = this.extractResponses(content, method);
     
+    // Extract request headers
+    const requestHeaders = this.extractRequestHeaders(content, method);
+    
+    // Extract request body
+    const requestBody = this.extractRequestBody(content, method);
+    
     // Extract tags from file path
     const tags = this.extractTags(file);
 
@@ -53,6 +59,8 @@ export class Parser {
       description,
       parameters,
       responses,
+      requestHeaders,
+      requestBody,
       tags,
       summary: description
     };
@@ -295,5 +303,155 @@ export class Parser {
     }
 
     return tags;
+  }
+
+  private extractRequestHeaders(content: string, method: string): ApiRequestHeader[] {
+    const headers: ApiRequestHeader[] = [];
+    
+    // Look for headers in request object destructuring
+    const headerPatterns = [
+      // const { headers } = request
+      /const\s*{\s*headers\s*}\s*=\s*request/gi,
+      // const { headers: reqHeaders } = request
+      /const\s*{\s*headers:\s*\w+\s*}\s*=\s*request/gi,
+      // request.headers
+      /request\.headers/gi,
+      // req.headers
+      /req\.headers/gi
+    ];
+
+    for (const pattern of headerPatterns) {
+      if (pattern.test(content)) {
+        // Common API headers
+        const commonHeaders = [
+          { name: 'Authorization', required: false, description: 'Bearer token for authentication' },
+          { name: 'Content-Type', required: false, description: 'Content type of the request' },
+          { name: 'Accept', required: false, description: 'Acceptable response types' },
+          { name: 'User-Agent', required: false, description: 'Client user agent' },
+          { name: 'X-API-Key', required: false, description: 'API key for authentication' },
+          { name: 'X-Request-ID', required: false, description: 'Unique request identifier' }
+        ];
+        
+        headers.push(...commonHeaders);
+        break;
+      }
+    }
+
+    // Look for specific header usage in the code
+    const specificHeaderPattern = /headers\[['"`]([^'"`]+)['"`]\]/gi;
+    let match;
+    while ((match = specificHeaderPattern.exec(content)) !== null) {
+      const headerName = match[1];
+      if (!headers.find(h => h.name === headerName)) {
+        headers.push({
+          name: headerName,
+          required: false,
+          description: `Custom header: ${headerName}`
+        });
+      }
+    }
+
+    return headers;
+  }
+
+  private extractRequestBody(content: string, method: string): ApiRequestBody | undefined {
+    // Only extract request body for methods that typically have a body
+    const bodyMethods = ['POST', 'PUT', 'PATCH'];
+    if (!bodyMethods.includes(method)) {
+      return undefined;
+    }
+
+    // Look for request body patterns
+    const bodyPatterns = [
+      // const { body } = request
+      /const\s*{\s*body\s*}\s*=\s*request/gi,
+      // const { body: requestBody } = request
+      /const\s*{\s*body:\s*\w+\s*}\s*=\s*request/gi,
+      // const body = await request.json()
+      /const\s+\w+\s*=\s*await\s+request\.json\(\)/gi,
+      // const body = await req.json()
+      /const\s+\w+\s*=\s*await\s+req\.json\(\)/gi,
+      // request.body
+      /request\.body/gi,
+      // req.body
+      /req\.body/gi,
+      // await request.json()
+      /await\s+request\.json\(\)/gi,
+      // await req.json()
+      /await\s+req\.json\(\)/gi
+    ];
+
+    let hasRequestBody = false;
+    for (const pattern of bodyPatterns) {
+      if (pattern.test(content)) {
+        hasRequestBody = true;
+        break;
+      }
+    }
+
+    if (!hasRequestBody) {
+      return undefined;
+    }
+
+    // Look for TypeScript interface or type definitions
+    const interfacePattern = /interface\s+(\w+)\s*{[^}]*}/gi;
+    const typePattern = /type\s+(\w+)\s*=\s*{[^}]*}/gi;
+    
+    let schemaType = 'object';
+    let schema: any = {};
+    let example: any = {};
+    
+    // Try to find interface or type definition
+    const interfaceMatches = content.match(interfacePattern);
+    const typeMatches = content.match(typePattern);
+    
+    if (interfaceMatches || typeMatches) {
+      schemaType = 'object';
+      schema = {
+        type: 'object',
+        properties: {},
+        required: []
+      };
+      
+      // Try to extract properties from interface
+      const allMatches = [...(interfaceMatches || []), ...(typeMatches || [])];
+      for (const match of allMatches) {
+        // Extract properties from interface
+        const propertyMatches = match.match(/(\w+)\s*:\s*([^;,\n]+)/g);
+        if (propertyMatches) {
+          for (const prop of propertyMatches) {
+            const [name, type] = prop.split(':').map(s => s.trim());
+            if (name && type) {
+              schema.properties[name] = {
+                type: type.includes('string') ? 'string' : 
+                      type.includes('number') ? 'number' : 
+                      type.includes('boolean') ? 'boolean' : 
+                      type.includes('[]') ? 'array' : 'object'
+              };
+              
+              // Generate example value
+              if (type.includes('string')) {
+                example[name] = `example_${name}`;
+              } else if (type.includes('number')) {
+                example[name] = 0;
+              } else if (type.includes('boolean')) {
+                example[name] = true;
+              } else if (type.includes('[]')) {
+                example[name] = [];
+              } else {
+                example[name] = {};
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      type: 'application/json',
+      schema: schema,
+      description: `Request body for ${method} ${method === 'POST' ? 'creating' : method === 'PUT' ? 'updating' : 'patching'} resource`,
+      example: Object.keys(example).length > 0 ? example : (schemaType === 'object' ? {} : null)
+    };
   }
 }

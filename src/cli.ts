@@ -116,6 +116,17 @@ async function main(pathArg: string, options: any) {
       process.exit(1);
     }
 
+    // Use fixed filenames to avoid creating multiple files
+    if (scannerOptions.format === 'html') {
+      scannerOptions.output = 'api-documentation.html';
+    } else if (scannerOptions.format === 'json') {
+      scannerOptions.output = 'api-documentation.json';
+    } else if (scannerOptions.format === 'markdown') {
+      scannerOptions.output = 'api-documentation.md';
+    } else if (scannerOptions.format === 'swagger') {
+      scannerOptions.output = 'api-documentation.yaml';
+    }
+
     // Create scanner instance
     const scanner = new ApiScanner(scannerOptions);
 
@@ -671,6 +682,7 @@ function openInBrowser(filePath: string): void {
 
 async function handleViewMode(options: any): Promise<void> {
   const outputFile = options.output || 'api-documentation.json';
+  const htmlFile = 'api-documentation.html'; // Fixed HTML file name
   
   if (!fs.existsSync(outputFile)) {
     console.log(chalk.red(`❌ JSON file not found: ${outputFile}`));
@@ -681,10 +693,23 @@ async function handleViewMode(options: any): Promise<void> {
   console.log(chalk.blue.bold('🔍 API Scanner - View Mode'));
   console.log(chalk.gray('Opening HTML documentation viewer...\n'));
 
+  // Check if HTML file exists and is newer than JSON
+  const jsonStats = fs.statSync(outputFile);
+  const htmlExists = fs.existsSync(htmlFile);
+  
+  if (htmlExists) {
+    const htmlStats = fs.statSync(htmlFile);
+    if (htmlStats.mtime > jsonStats.mtime) {
+      console.log(chalk.green('✅ Using existing HTML documentation'));
+      openInBrowser(htmlFile);
+      return;
+    }
+  }
+
   // Generate HTML from existing JSON
   const scanner = new ApiScanner({
     path: options.path || 'src/app/api',
-    output: outputFile,
+    output: htmlFile, // Use fixed HTML file name
     format: 'html',
     verbose: options.verbose
   });
