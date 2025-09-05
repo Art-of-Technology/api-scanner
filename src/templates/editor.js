@@ -188,6 +188,9 @@ class ApiEditor {
         
         const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
         container.appendChild(endpointCard);
+        
+        // Highlight JSON after adding the card
+        this.highlightJSON(endpointCard);
         console.log('Endpoint card added to container');
     }
 
@@ -209,6 +212,9 @@ class ApiEditor {
         
         const endpointCard = this.createEndpointCard(endpoint, endpointIndex);
         container.appendChild(endpointCard);
+        
+        // Highlight JSON after adding the card
+        this.highlightJSON(endpointCard);
         console.log('Endpoint card added to container from search');
     }
 
@@ -424,7 +430,7 @@ class ApiEditor {
                      id="response-${endpointIndex}-${responseIndex}"
                      data-endpoint-index="${endpointIndex}" 
                      data-response-index="${responseIndex}">
-                    ${typeof response.example === 'object' ? JSON.stringify(response.example, null, 2) : (response.example || 'No example provided')}
+                    <pre><code class="language-json">${typeof response.example === 'object' ? JSON.stringify(response.example, null, 2) : (response.example || 'No example provided')}</code></pre>
                 </div>
                 <div class="d-none" id="editor-${endpointIndex}-${responseIndex}">
                     <textarea class="json-editor" rows="6">${typeof response.example === 'object' ? JSON.stringify(response.example, null, 2) : (response.example || '')}</textarea>
@@ -519,7 +525,7 @@ class ApiEditor {
                 <div class="mt-2">
                     <strong>Example:</strong>
                     <div class="response-example mt-1">
-                        ${typeof requestBody.example === 'object' ? JSON.stringify(requestBody.example, null, 2) : requestBody.example}
+                        <pre><code class="language-json">${typeof requestBody.example === 'object' ? JSON.stringify(requestBody.example, null, 2) : requestBody.example}</code></pre>
                     </div>
                 </div>
                 ` : ''}
@@ -664,10 +670,14 @@ class ApiEditor {
             // Set editing state
             this.editingResponse = { endpointIndex, responseIndex };
             
-            // Focus the textarea
+            // Create CodeMirror editor
             const textarea = editor.querySelector('.json-editor');
             if (textarea) {
-                textarea.focus();
+                // Store the CodeMirror instance
+                this.editingResponse.codeMirror = this.createCodeMirrorEditor(textarea, 'javascript');
+                if (this.editingResponse.codeMirror) {
+                    this.editingResponse.codeMirror.focus();
+                }
             }
         }
     }
@@ -678,6 +688,11 @@ class ApiEditor {
         const editor = document.getElementById(`editor-${endpointIndex}-${responseIndex}`);
         
         if (display && editor) {
+            // Destroy CodeMirror editor if it exists
+            if (this.editingResponse && this.editingResponse.codeMirror) {
+                this.destroyCodeMirrorEditor(this.editingResponse.codeMirror);
+            }
+            
             editor.classList.add('d-none');
             display.classList.remove('d-none');
             
@@ -689,8 +704,15 @@ class ApiEditor {
     async saveResponse(endpointIndex, responseIndex) {
         try {
             const editor = document.getElementById(`editor-${endpointIndex}-${responseIndex}`);
-            const textarea = editor.querySelector('.json-editor');
-            let newExample = textarea.value;
+            let newExample;
+            
+            // Get value from CodeMirror if available, otherwise from textarea
+            if (this.editingResponse && this.editingResponse.codeMirror) {
+                newExample = this.editingResponse.codeMirror.getValue();
+            } else {
+                const textarea = editor.querySelector('.json-editor');
+                newExample = textarea.value;
+            }
 
             console.log('Saving response:', { endpointIndex, responseIndex, newExample });
 
@@ -734,7 +756,10 @@ class ApiEditor {
             if (response.ok) {
                 // Update the display
                 const display = document.getElementById(`response-${endpointIndex}-${responseIndex}`);
-                display.textContent = typeof newExample === 'object' ? JSON.stringify(newExample, null, 2) : (newExample || 'No example provided');
+                display.innerHTML = `<pre><code class="language-json">${typeof newExample === 'object' ? JSON.stringify(newExample, null, 2) : (newExample || 'No example provided')}</code></pre>`;
+                
+                // Highlight the updated JSON
+                this.highlightJSON(display);
                 
                 // Hide editor and show display
                 this.cancelEditing(endpointIndex, responseIndex);
@@ -763,10 +788,13 @@ class ApiEditor {
             // Set editing state
             this.editingHeader = { endpointIndex, headerIndex };
             
-            // Focus the textarea
+            // Create CodeMirror editor
             const textarea = editor.querySelector('.json-editor');
             if (textarea) {
-                textarea.focus();
+                this.editingHeader.codeMirror = this.createCodeMirrorEditor(textarea, 'javascript');
+                if (this.editingHeader.codeMirror) {
+                    this.editingHeader.codeMirror.focus();
+                }
             }
         }
     }
@@ -776,6 +804,11 @@ class ApiEditor {
         const editor = document.getElementById(`editor-header-${endpointIndex}-${headerIndex}`);
         
         if (display && editor) {
+            // Destroy CodeMirror editor if it exists
+            if (this.editingHeader && this.editingHeader.codeMirror) {
+                this.destroyCodeMirrorEditor(this.editingHeader.codeMirror);
+            }
+            
             editor.classList.add('d-none');
             display.classList.remove('d-none');
             
@@ -787,8 +820,15 @@ class ApiEditor {
     async saveHeader(endpointIndex, headerIndex) {
         try {
             const editor = document.getElementById(`editor-header-${endpointIndex}-${headerIndex}`);
-            const textarea = editor.querySelector('.json-editor');
-            const newDescription = textarea.value;
+            let newDescription;
+            
+            // Get value from CodeMirror if available, otherwise from textarea
+            if (this.editingHeader && this.editingHeader.codeMirror) {
+                newDescription = this.editingHeader.codeMirror.getValue();
+            } else {
+                const textarea = editor.querySelector('.json-editor');
+                newDescription = textarea.value;
+            }
 
             console.log('Saving header:', { endpointIndex, headerIndex, newDescription });
 
@@ -823,10 +863,13 @@ class ApiEditor {
             // Set editing state
             this.editingBody = { endpointIndex, bodyIndex };
             
-            // Focus the textarea
+            // Create CodeMirror editor
             const textarea = editor.querySelector('.json-editor');
             if (textarea) {
-                textarea.focus();
+                this.editingBody.codeMirror = this.createCodeMirrorEditor(textarea, 'javascript');
+                if (this.editingBody.codeMirror) {
+                    this.editingBody.codeMirror.focus();
+                }
             }
         }
     }
@@ -836,6 +879,11 @@ class ApiEditor {
         const editor = document.getElementById(`editor-body-${endpointIndex}-${bodyIndex}`);
         
         if (display && editor) {
+            // Destroy CodeMirror editor if it exists
+            if (this.editingBody && this.editingBody.codeMirror) {
+                this.destroyCodeMirrorEditor(this.editingBody.codeMirror);
+            }
+            
             editor.classList.add('d-none');
             display.classList.remove('d-none');
             
@@ -847,8 +895,15 @@ class ApiEditor {
     async saveBody(endpointIndex, bodyIndex) {
         try {
             const editor = document.getElementById(`editor-body-${endpointIndex}-${bodyIndex}`);
-            const textarea = editor.querySelector('.json-editor');
-            let newDescription = textarea.value;
+            let newDescription;
+            
+            // Get value from CodeMirror if available, otherwise from textarea
+            if (this.editingBody && this.editingBody.codeMirror) {
+                newDescription = this.editingBody.codeMirror.getValue();
+            } else {
+                const textarea = editor.querySelector('.json-editor');
+                newDescription = textarea.value;
+            }
 
             console.log('Saving body:', { endpointIndex, bodyIndex, newDescription });
 
@@ -961,6 +1016,69 @@ class ApiEditor {
         return grouped;
     }
 
+    highlightJSON(container) {
+        if (typeof Prism !== 'undefined') {
+            // Use a more reliable method to highlight JSON
+            setTimeout(() => {
+                // First, remove any existing highlighting
+                const codeElements = container.querySelectorAll('code.language-json');
+                codeElements.forEach(code => {
+                    // Clear existing highlighting
+                    code.innerHTML = code.textContent;
+                    code.className = 'language-json';
+                });
+                
+                // Then re-highlight all elements
+                Prism.highlightAllUnder(container);
+            }, 50);
+        }
+    }
+
+    createCodeMirrorEditor(textarea, mode = 'javascript') {
+        if (typeof CodeMirror === 'undefined') {
+            console.warn('CodeMirror not loaded, falling back to regular textarea');
+            return null;
+        }
+
+        const editor = CodeMirror.fromTextArea(textarea, {
+            mode: mode,
+            theme: 'monokai',
+            lineNumbers: true,
+            lineWrapping: true,
+            indentUnit: 2,
+            tabSize: 2,
+            indentWithTabs: false,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            autoCloseQuotes: true,
+            foldGutter: true,
+            gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+            extraKeys: {
+                'Ctrl-S': function(cm) {
+                    // Trigger save
+                    const saveBtn = textarea.closest('.d-none').querySelector('.save-btn');
+                    if (saveBtn) saveBtn.click();
+                },
+                'Esc': function(cm) {
+                    // Trigger cancel
+                    const cancelBtn = textarea.closest('.d-none').querySelector('.cancel-btn');
+                    if (cancelBtn) cancelBtn.click();
+                }
+            }
+        });
+
+        // Apply custom styling
+        editor.setOption('theme', 'default');
+        
+        return editor;
+    }
+
+    destroyCodeMirrorEditor(editor) {
+        if (editor && editor.toTextArea) {
+            editor.toTextArea();
+        }
+    }
+
 
 }
 
@@ -975,4 +1093,9 @@ function scrollToTop() {
 // Initialize editor when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.editor = new ApiEditor();
+    
+    // Initialize Prism.js highlighting
+    if (typeof Prism !== 'undefined') {
+        Prism.highlightAll();
+    }
 });
