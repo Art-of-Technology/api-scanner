@@ -14,6 +14,19 @@ export interface ApiResponse {
   schema?: any;
 }
 
+export interface ApiRequestHeader {
+  name: string;
+  required: boolean;
+  description?: string;
+}
+
+export interface ApiRequestBody {
+  type: string;
+  schema?: any;
+  description?: string;
+  example?: any;
+}
+
 export interface ApiEndpoint {
   method: string;
   url: string;
@@ -21,6 +34,8 @@ export interface ApiEndpoint {
   description?: string;
   parameters: ApiParameter[];
   responses: Record<string, ApiResponse>;
+  requestHeaders?: ApiRequestHeader[];
+  requestBody?: ApiRequestBody;
   tags?: string[];
   summary?: string;
 }

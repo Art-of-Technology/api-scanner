@@ -15,8 +15,10 @@ Next.js API route scanner that automatically generates API documentation from yo
 - ✏️ **Editor Mode**: Interactive API documentation editor with hierarchical TOC and real-time search
 - 🚀 **Next.js App Router**: Supports the new App Router structure (`src/app/api/`)
 - 🔧 **Configurable**: Customize scanning behavior with config files
-- 📊 **Rich Metadata**: Extracts parameters, responses, and descriptions
+- 📊 **Rich Metadata**: Extracts parameters, responses, request headers, and request bodies
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
+- 🔍 **Request Analysis**: Automatically detects request headers and request body schemas from TypeScript code
+- ✏️ **Interactive Editing**: Edit request headers, request bodies, and responses in the editor mode
 
 ## Installation
 
@@ -150,6 +152,28 @@ Create a `.api-scanner.json` file in your project root:
           "description": "Workspace ID"
         }
       ],
+      "requestHeaders": [
+        {
+          "name": "Authorization",
+          "required": true,
+          "description": "Bearer token for authentication"
+        }
+      ],
+      "requestBody": {
+        "type": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "description": "Issue creation data",
+        "example": {
+          "title": "Sample Issue",
+          "description": "This is a sample issue"
+        }
+      },
       "responses": {
         "200": {
           "description": "Success",
@@ -266,8 +290,10 @@ npx api-scanner --format editor --output editor.html
 ## Editor Mode Features
 
 - **Hierarchical TOC**: Postman-like collapsible folder structure
-- **Real-time Search**: Search endpoints by path, method, or description
+- **Real-time Search**: Search endpoints by path, method, or description with preview cards
 - **Dynamic Display**: Click to view specific endpoint details
+- **Interactive Editing**: Edit request headers, request bodies, and responses
+- **Request Analysis**: Automatically detects request headers and body schemas from TypeScript code
 - **Modern UI**: Bootstrap 5.3.0 with dark theme and smooth animations
 
 ## Supported Route Patterns
@@ -298,6 +324,51 @@ export async function POST(request: Request) {
 export const GET = async (request: Request) => { /* ... */ };
 export const POST = async (request: Request) => { /* ... */ };
 ```
+
+## Request Analysis
+
+The scanner automatically analyzes your route files to detect:
+
+### Request Headers
+Detects common request headers used in your API routes:
+
+```typescript
+export async function POST(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  const contentType = request.headers.get('Content-Type');
+  const { headers } = request;
+  
+  // Scanner will detect: Authorization, Content-Type
+}
+```
+
+### Request Body Detection
+Analyzes request body usage and extracts TypeScript type information:
+
+```typescript
+// Detects request body usage
+export async function POST(request: Request) {
+  const body = await request.json();
+  // Scanner detects JSON body usage
+}
+
+// Extracts TypeScript interface information
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  age?: number;
+}
+
+export async function POST(request: Request) {
+  const body: CreateUserRequest = await request.json();
+  // Scanner extracts schema and generates example
+}
+```
+
+The scanner generates:
+- **Request Headers**: List of detected headers with names and required status
+- **Request Body Schema**: TypeScript interface analysis converted to JSON schema
+- **Request Body Example**: Generated example based on detected types
 
 ## JSDoc Support
 
@@ -333,6 +404,37 @@ export async function POST(request: Request) {
   const body = await request.json();
   
   return Response.json({ id: '123', success: true }, { status: 201 });
+}
+```
+
+### Route with Request Headers and Body
+
+```typescript
+// src/app/api/users/route.ts
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  age?: number;
+}
+
+export async function POST(request: Request) {
+  // Request headers detection
+  const authHeader = request.headers.get('Authorization');
+  const contentType = request.headers.get('Content-Type');
+  
+  // Request body detection with TypeScript types
+  const body: CreateUserRequest = await request.json();
+  
+  // Scanner will automatically detect:
+  // - Request headers: Authorization, Content-Type
+  // - Request body schema from CreateUserRequest interface
+  // - Generate example JSON based on interface properties
+  
+  return Response.json({ 
+    id: '123', 
+    name: body.name, 
+    email: body.email 
+  }, { status: 201 });
 }
 ```
 
