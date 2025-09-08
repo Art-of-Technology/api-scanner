@@ -12,7 +12,7 @@ export class Parser {
     const action = pathParts[1] || '';
     const id = pathParts[2] || '';
     
-    // Method'a göre action belirle
+    // Determine action based on method
     const actionMap: { [key: string]: string } = {
       'GET': action ? 'Get' : 'List',
       'POST': 'Create',
