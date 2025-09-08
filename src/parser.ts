@@ -3,6 +3,64 @@ import { ParsedRoute, ApiEndpoint, ApiParameter, ApiResponse, ApiRequestHeader, 
 export class Parser {
   private httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 
+  /**
+   * Generate automatic title and description based on URL and method
+   */
+  private generateEndpointInfo(url: string, method: string): { title: string, description: string } {
+    const pathParts = url.split('/').filter(part => part && part !== 'api');
+    const resource = pathParts[0] || 'resource';
+    const action = pathParts[1] || '';
+    const id = pathParts[2] || '';
+    
+    // Determine action based on method
+    const actionMap: { [key: string]: string } = {
+      'GET': action ? 'Get' : 'List',
+      'POST': 'Create',
+      'PUT': 'Update', 
+      'PATCH': 'Update',
+      'DELETE': 'Delete',
+      'HEAD': 'Check',
+      'OPTIONS': 'Options'
+    };
+    
+    const baseAction = actionMap[method] || 'Handle';
+    const resourceName = resource.charAt(0).toUpperCase() + resource.slice(1);
+    
+    // Title generation
+    let title = `${baseAction} ${resourceName}`;
+    if (action) {
+      const actionName = action.charAt(0).toUpperCase() + action.slice(1);
+      title += ` ${actionName}`;
+    }
+    if (id) {
+      title += ` by ID`;
+    }
+    
+    // Description generation
+    let description = `${baseAction.toLowerCase()} ${resourceName.toLowerCase()}`;
+    if (action) {
+      description += ` ${action.toLowerCase()}`;
+    }
+    if (id) {
+      description += ` by specific identifier`;
+    }
+    
+    // Method-specific descriptions
+    const methodDescriptions: { [key: string]: string } = {
+      'GET': action ? `Retrieve ${resourceName.toLowerCase()} ${action.toLowerCase()} information` : `Retrieve a list of ${resourceName.toLowerCase()}s`,
+      'POST': `Create a new ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''}`,
+      'PUT': `Update an existing ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''}`,
+      'PATCH': `Partially update an existing ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''}`,
+      'DELETE': `Remove a ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''}`,
+      'HEAD': `Check if ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''} exists`,
+      'OPTIONS': `Get available options for ${resourceName.toLowerCase()}${action ? ` ${action.toLowerCase()}` : ''}`
+    };
+    
+    description = methodDescriptions[method] || description;
+    
+    return { title, description };
+  }
+
   extractHttpMethods(content: string): string[] {
     const methods: string[] = [];
     
@@ -34,8 +92,15 @@ export class Parser {
   async parseEndpoint(route: ParsedRoute): Promise<ApiEndpoint | null> {
     const { method, path, file, content } = route;
 
-    // Extract description from JSDoc comments
-    const description = this.extractDescription(content, method);
+    // Extract title and description from JSDoc comments
+    const jsdocInfo = this.extractJSDocInfo(content, method);
+    
+    // Generate automatic title and description if JSDoc doesn't exist
+    const generatedInfo = this.generateEndpointInfo(path, method);
+    
+    // Use JSDoc info if available, otherwise use generated
+    const title = jsdocInfo.title || generatedInfo.title;
+    const description = jsdocInfo.description || generatedInfo.description;
     
     // Extract parameters
     const parameters = this.extractParameters(content, method, path);
@@ -56,6 +121,7 @@ export class Parser {
       method,
       url: path,
       file,
+      title,
       description,
       parameters,
       responses,
@@ -66,12 +132,12 @@ export class Parser {
     };
   }
 
-  private extractDescription(content: string, method: string): string | undefined {
+  private extractJSDocInfo(content: string, method: string): { title?: string, description?: string } {
     // Look for JSDoc comments above the method
     const methodPattern = new RegExp(`export\\s+(?:async\\s+)?function\\s+${method}\\s*\\(`, 'i');
     const match = content.match(methodPattern);
     
-    if (!match) return undefined;
+    if (!match) return {};
 
     const methodIndex = match.index!;
     const beforeMethod = content.substring(0, methodIndex);
@@ -80,13 +146,24 @@ export class Parser {
     const jsdocPattern = /\/\*\*([\s\S]*?)\*\//g;
     const jsdocMatches = [...beforeMethod.matchAll(jsdocPattern)];
     
-    if (jsdocMatches.length === 0) return undefined;
+    if (jsdocMatches.length === 0) return {};
 
     const lastJSDoc = jsdocMatches[jsdocMatches.length - 1][1];
     
+    // Extract @api {method} url title pattern
+    const apiMatch = lastJSDoc.match(/@api\s+\{(\w+)\}\s+(\S+)\s+(.+)/);
+    if (apiMatch) {
+      return {
+        title: apiMatch[3].trim(),
+        description: lastJSDoc.match(/@apiDescription\s+(.+)/)?.[1]?.trim()
+      };
+    }
+    
     // Extract description from JSDoc
     const descriptionMatch = lastJSDoc.match(/^\s*\*\s*(.+)$/m);
-    return descriptionMatch ? descriptionMatch[1].trim() : undefined;
+    return {
+      description: descriptionMatch ? descriptionMatch[1].trim() : undefined
+    };
   }
 
   private extractParameters(content: string, method: string, path: string): ApiParameter[] {

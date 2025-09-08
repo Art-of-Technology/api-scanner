@@ -509,30 +509,16 @@ async function runInteractiveWizard() {
         await scanner.generateDocumentation();
         
         console.log(chalk.green('\n✅ JSON documentation generated successfully!'));
-        
-        // Create a separate JSON file for the editor
-        const editorJsonFile = 'api-routes.json';
-        const editorScannerOptions: ScannerOptions = {
-          path: scanPath,
-          output: editorJsonFile,
-          format: 'json' as 'json' | 'markdown' | 'swagger' | 'html',
-          verbose: verbose
-        };
-
-        const editorScanner = new ApiScanner(editorScannerOptions);
-        await editorScanner.generateDocumentation();
-        
-        console.log(chalk.green(`✅ Editor JSON file created: ${editorJsonFile}`));
         console.log(chalk.blue('\n🚀 Starting HTML Editor...\n'));
         
         // Start editor server
         try {
           const { EditorServer } = await import('./server');
-          const server = new EditorServer(editorJsonFile);
+          const server = new EditorServer(jsonOutput);
           const port = await server.start();
           
           console.log(chalk.green(`🚀 Editor server started on ${server.getUrl()}`));
-          console.log(chalk.gray(`📁 Editing JSON file: ${editorJsonFile}`));
+          console.log(chalk.gray(`📁 Editing JSON file: ${jsonOutput}`));
           console.log(chalk.yellow('\n💡 Press Ctrl+C to stop the server\n'));
           
           // Open browser
@@ -741,12 +727,20 @@ async function handleEditMode(options: any): Promise<void> {
     // Open browser
     if (!options.noOpen) {
       const { exec } = require('child_process');
-      const command = process.platform === 'win32' ? 'start' : 
-                     process.platform === 'darwin' ? 'open' : 'xdg-open';
+      const url = server.getUrl();
       
-      exec(`${command} ${server.getUrl()}`, (error: any) => {
+      let command: string;
+      if (process.platform === 'win32') {
+        command = `start "" "${url}"`;
+      } else if (process.platform === 'darwin') {
+        command = `open "${url}"`;
+      } else {
+        command = `xdg-open "${url}"`;
+      }
+      
+      exec(command, (error: any) => {
         if (error) {
-          console.log(chalk.blue(`📄 Editor available at: ${server.getUrl()}`));
+          console.log(chalk.blue(`📄 Editor available at: ${url}`));
         } else {
           console.log(chalk.green(`🌐 Opening editor in browser...`));
         }
