@@ -1,85 +1,189 @@
 import express from 'express';
-import cors from 'cors';
-import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import * as fs from 'fs-extra';
 import { ApiDocumentation } from './types';
 
 export class EditorServer {
   private app: express.Application;
-  private port!: number;
+  private port: number = 0;
   private jsonFilePath: string;
 
   constructor(jsonFilePath: string) {
-    this.app = express();
     this.jsonFilePath = jsonFilePath;
+    this.app = express();
     this.setupMiddleware();
     this.setupRoutes();
   }
 
   private setupMiddleware(): void {
-    this.app.use(cors());
-    this.app.use(express.json());
+    // Serve static files from templates directory
     this.app.use(express.static(join(__dirname, 'templates')));
     
-    // Debug middleware
+    // Parse JSON bodies
+    this.app.use(express.json({ limit: '10mb' }));
+    
+    // CORS middleware
     this.app.use((req, res, next) => {
-      console.log(`${req.method} ${req.path}`);
-      next();
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      
+      if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+      } else {
+        next();
+      }
     });
   }
 
   private setupRoutes(): void {
-    // Serve editor page
+    // Serve the editor page
     this.app.get('/', (req, res) => {
       res.sendFile(join(__dirname, 'templates', 'editor-template.html'));
     });
 
-    // Get JSON data
-    this.app.get('/api/data', (req, res) => {
+    // Get API documentation
+    this.app.get('/api/data', async (req, res) => {
       try {
-        const data = readFileSync(this.jsonFilePath, 'utf8');
-        const jsonData = JSON.parse(data);
-        res.json(jsonData);
+        const data = await fs.readJson(this.jsonFilePath);
+        res.json(data);
       } catch (error) {
+        console.error('Error reading JSON file:', error);
         res.status(500).json({ error: 'Failed to read JSON file' });
       }
     });
 
-    // Update single endpoint
-    this.app.put('/api/endpoint/:index', (req, res) => {
+    // Save API documentation
+    this.app.post('/api/save', async (req, res) => {
       try {
-        const index = parseInt(req.params.index);
-        const updatedEndpoint = req.body;
+        const { endpoints } = req.body;
         
-        const data = readFileSync(this.jsonFilePath, 'utf8');
-        const jsonData: ApiDocumentation = JSON.parse(data);
+        if (!endpoints || !Array.isArray(endpoints)) {
+          return res.status(400).json({ error: 'Invalid data format' });
+        }
+
+        // Read current data
+        const currentData = await fs.readJson(this.jsonFilePath);
         
-        if (index >= 0 && index < jsonData.endpoints.length) {
-          jsonData.endpoints[index] = updatedEndpoint;
-          writeFileSync(this.jsonFilePath, JSON.stringify(jsonData, null, 2));
-          res.json({ success: true });
+        // Update endpoints
+        const updatedData = {
+          ...currentData,
+          endpoints,
+          lastModified: new Date().toISOString()
+        };
+
+        // Save to file
+        await fs.writeJson(this.jsonFilePath, updatedData, { spaces: 2 });
+        
+        res.json({ success: true, message: 'Data saved successfully' });
+      } catch (error) {
+        console.error('Error saving data:', error);
+        res.status(500).json({ error: 'Failed to save data' });
+      }
+    });
+
+    // Save individual endpoint
+    this.app.post('/api/save-endpoint', async (req, res) => {
+      try {
+        const { index, endpoint } = req.body;
+        
+        if (typeof index !== 'number' || !endpoint) {
+          return res.status(400).json({ error: 'Invalid data format' });
+        }
+
+        // Read current data
+        const currentData = await fs.readJson(this.jsonFilePath);
+        
+        if (!currentData.endpoints || !Array.isArray(currentData.endpoints)) {
+          return res.status(400).json({ error: 'Invalid JSON structure' });
+        }
+
+        // Update specific endpoint
+        if (index >= 0 && index < currentData.endpoints.length) {
+          currentData.endpoints[index] = endpoint;
+          currentData.lastModified = new Date().toISOString();
+          
+          // Save to file
+          await fs.writeJson(this.jsonFilePath, currentData, { spaces: 2 });
+          
+          res.json({ success: true, message: 'Endpoint saved successfully' });
         } else {
           res.status(400).json({ error: 'Invalid endpoint index' });
         }
       } catch (error) {
-        res.status(500).json({ error: 'Failed to update endpoint' });
+        console.error('Error saving endpoint:', error);
+        res.status(500).json({ error: 'Failed to save endpoint' });
       }
     });
 
-    // Save all changes
-    this.app.put('/api/save-all', (req, res) => {
+    // Save all endpoints at once
+    this.app.post('/api/save-all', async (req, res) => {
       try {
-        const updatedData: ApiDocumentation = req.body;
-        writeFileSync(this.jsonFilePath, JSON.stringify(updatedData, null, 2));
-        res.json({ success: true });
+        const { endpoints } = req.body;
+        
+        if (!endpoints || !Array.isArray(endpoints)) {
+          return res.status(400).json({ error: 'Invalid data format' });
+        }
+
+        // Read current data
+        const currentData = await fs.readJson(this.jsonFilePath);
+        
+        // Update all endpoints
+        const updatedData = {
+          ...currentData,
+          endpoints,
+          lastModified: new Date().toISOString()
+        };
+
+        // Save to file
+        await fs.writeJson(this.jsonFilePath, updatedData, { spaces: 2 });
+        
+        res.json({ success: true, message: 'All endpoints saved successfully' });
       } catch (error) {
+        console.error('Error saving all endpoints:', error);
         res.status(500).json({ error: 'Failed to save all changes' });
+      }
+    });
+
+    // Update individual endpoint (PUT method for editing)
+    this.app.put('/api/endpoint/:index', async (req, res) => {
+      try {
+        const index = parseInt(req.params.index);
+        const { endpoint } = req.body;
+        
+        if (isNaN(index) || !endpoint) {
+          return res.status(400).json({ error: 'Invalid data format' });
+        }
+
+        // Read current data
+        const currentData = await fs.readJson(this.jsonFilePath);
+        
+        if (!currentData.endpoints || !Array.isArray(currentData.endpoints)) {
+          return res.status(400).json({ error: 'Invalid JSON structure' });
+        }
+
+        // Update specific endpoint
+        if (index >= 0 && index < currentData.endpoints.length) {
+          currentData.endpoints[index] = endpoint;
+          currentData.lastModified = new Date().toISOString();
+          
+          // Save to file
+          await fs.writeJson(this.jsonFilePath, currentData, { spaces: 2 });
+          
+          res.json({ success: true, message: 'Endpoint updated successfully' });
+        } else {
+          res.status(400).json({ error: 'Invalid endpoint index' });
+        }
+      } catch (error) {
+        console.error('Error updating endpoint:', error);
+        res.status(500).json({ error: 'Failed to update endpoint' });
       }
     });
   }
 
   async start(): Promise<number> {
     return new Promise((resolve, reject) => {
+      // Use port 0 to let the system automatically assign an available port
       const server = this.app.listen(0, () => {
         const address = server.address();
         if (address && typeof address === 'object') {

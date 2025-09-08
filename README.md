@@ -19,6 +19,7 @@ Next.js API route scanner that automatically generates API documentation from yo
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
 - 🔍 **Request Analysis**: Automatically detects request headers and request body schemas from TypeScript code
 - ✏️ **Interactive Editing**: Edit request headers, request bodies, and responses in the editor mode
+- 🤖 **Smart Title Generation**: Automatically generates human-readable titles and descriptions for endpoints (e.g., "Create Auth Login", "List Users")
 
 ## Installation
 

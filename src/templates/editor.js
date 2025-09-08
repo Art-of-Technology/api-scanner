@@ -346,6 +346,33 @@ class ApiEditor {
         }
     }
 
+    generateFallbackTitle(method, url) {
+        const pathParts = url.split('/').filter(part => part && part !== 'api');
+        const resource = pathParts[0] || 'resource';
+        const action = pathParts[1] || '';
+        
+        const actionMap = {
+            'GET': action ? 'Get' : 'List',
+            'POST': 'Create',
+            'PUT': 'Update', 
+            'PATCH': 'Update',
+            'DELETE': 'Delete',
+            'HEAD': 'Check',
+            'OPTIONS': 'Options'
+        };
+        
+        const baseAction = actionMap[method] || 'Handle';
+        const resourceName = resource.charAt(0).toUpperCase() + resource.slice(1);
+        
+        let title = `${baseAction} ${resourceName}`;
+        if (action) {
+            const actionName = action.charAt(0).toUpperCase() + action.slice(1);
+            title += ` ${actionName}`;
+        }
+        
+        return title;
+    }
+
     createEndpointCard(endpoint, index) {
         const card = document.createElement('div');
         card.className = 'endpoint-card';
@@ -356,13 +383,14 @@ class ApiEditor {
                         <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">
                             ${endpoint.method || 'GET'}
                         </span>
-                        <span>${endpoint.url}</span>
+                        <span class="endpoint-url">${endpoint.url}</span>
                     </div>
                 </div>
             </div>
             <div class="endpoint-body">
-                <div class="mb-2">
-                    <strong>@api {${endpoint.method.toLowerCase()}}${endpoint.url}</strong> ${endpoint.description || ''}
+                <div class="mb-3">
+                    <h5 class="text-primary mb-1">${endpoint.title || this.generateFallbackTitle(endpoint.method, endpoint.url)}</h5>
+                    <p class="text-muted mb-2">${endpoint.description || 'No description available'}</p>
                 </div>
                 
                 <!-- Request Headers Section -->
@@ -521,14 +549,6 @@ class ApiEditor {
                      data-body-index="0">
                     ${requestBody.description || 'Request body for this endpoint'}
                 </div>
-                ${requestBody.example ? `
-                <div class="mt-2">
-                    <strong>Example:</strong>
-                    <div class="response-example mt-1">
-                        <pre><code class="language-json">${typeof requestBody.example === 'object' ? JSON.stringify(requestBody.example, null, 2) : requestBody.example}</code></pre>
-                    </div>
-                </div>
-                ` : ''}
                 <div class="d-none" id="editor-body-${endpointIndex}-0">
                     <textarea class="json-editor" rows="6">${requestBody.description || ''}</textarea>
                     <div class="mt-2">
@@ -748,7 +768,7 @@ class ApiEditor {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(endpoint)
+                body: JSON.stringify({ endpoint })
             });
 
             console.log('Server response:', response.status, response.statusText);
@@ -918,18 +938,42 @@ class ApiEditor {
             }
 
             // Update the data
-            if (this.apiData && this.apiData.endpoints[endpointIndex] && this.apiData.endpoints[endpointIndex].requestBody) {
-                this.apiData.endpoints[endpointIndex].requestBody.description = newDescription;
+            const endpoint = this.apiData.endpoints[endpointIndex];
+            if (endpoint && endpoint.requestBody) {
+                endpoint.requestBody.description = newDescription;
             }
 
-            // Update the display
-            const display = document.getElementById(`body-${endpointIndex}-${bodyIndex}`);
-            display.textContent = newDescription || 'Request body for this endpoint';
-            
-            // Hide editor and show display
-            this.cancelEditingBody(endpointIndex, bodyIndex);
-            
-            this.showToast('Request body saved successfully!', 'success');
+            console.log('Updated endpoint:', endpoint);
+
+            // Save to server
+            const response = await fetch(`/api/endpoint/${endpointIndex}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ endpoint })
+            });
+
+            console.log('Server response:', response.status, response.statusText);
+
+            if (response.ok) {
+                // Update the display
+                const display = document.getElementById(`body-${endpointIndex}-${bodyIndex}`);
+                if (display) {
+                    display.innerHTML = `<pre><code class="language-json">${newDescription || 'Request body for this endpoint'}</code></pre>`;
+                    // Highlight the updated JSON
+                    this.highlightJSON(display);
+                }
+                
+                // Hide editor and show display
+                this.cancelEditingBody(endpointIndex, bodyIndex);
+                
+                this.showToast('Request body saved successfully!', 'success');
+            } else {
+                const errorText = await response.text();
+                console.error('Server error:', errorText);
+                throw new Error('Failed to save request body: ' + errorText);
+            }
         } catch (error) {
             console.error('Save body error:', error);
             this.showToast('Failed to save request body: ' + error.message, 'error');

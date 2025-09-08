@@ -31,6 +31,7 @@ export interface ApiEndpoint {
   method: string;
   url: string;
   file: string;
+  title?: string;
   description?: string;
   parameters: ApiParameter[];
   responses: Record<string, ApiResponse>;

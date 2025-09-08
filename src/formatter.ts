@@ -227,12 +227,20 @@ export class Formatter {
             endpointsHtml += endpointHtml;
         }
         
-        const sectionHtml = await this.templateEngine.renderTemplate('section-template', {
-            tagId,
-            tagName: tag,
-            endpointCount: endpoints.length,
-            endpoints: endpointsHtml
-        });
+        const sectionHtml = `
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title" id="${tagId}">
+                        <i class="bi bi-folder2-open me-2"></i>${tag}
+                    </h2>
+                    <small class="text-muted">
+                        <i class="bi bi-diagram-3 me-1"></i>${endpoints.length} endpoints
+                    </small>
+                </div>
+                <div class="card-body p-4">
+                    ${endpointsHtml}
+                </div>
+            </div>`;
         
         sectionsHtml += sectionHtml;
         if (verbose) {
@@ -302,9 +310,27 @@ export class Formatter {
                 </tr>`;
         }
         
-        parameters = await this.templateEngine.renderTemplate('parameters-template', {
-            parameterRows
-        });
+        parameters = `
+            <div class="mt-4">
+                <h6 class="mb-3">
+                    <i class="bi bi-list-check me-2"></i>Parameters
+                </h6>
+                <div class="table-responsive">
+                    <table class="table parameters-table">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-tag me-1"></i>Name</th>
+                                <th><i class="bi bi-code-square me-1"></i>Type</th>
+                                <th><i class="bi bi-exclamation-circle me-1"></i>Required</th>
+                                <th><i class="bi bi-geo-alt me-1"></i>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${parameterRows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
     }
 
     // Generate responses
@@ -324,20 +350,28 @@ export class Formatter {
             responseItems += `</div>`;
         }
         
-        responses = await this.templateEngine.renderTemplate('responses-template', {
-            responseItems
-        });
+        responses = `
+            <div class="mt-4">
+                <h6 class="mb-3">
+                    <i class="bi bi-arrow-return-right me-2"></i>Responses
+                </h6>
+                ${responseItems}
+            </div>`;
     }
 
-    // Render endpoint template
-    return await this.templateEngine.renderTemplate('endpoint-template', {
-        methodClass,
-        method: endpoint.method,
-        url: endpoint.url,
-        description,
-        parameters,
-        responses,
-        file: endpoint.file
-    });
+    // Return simple HTML structure (will be replaced by JavaScript in template)
+    return `
+        <div class="endpoint-card">
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge ${methodClass} text-white me-3">${endpoint.method}</span>
+                <code class="endpoint-url flex-grow-1">${endpoint.url}</code>
+            </div>
+            ${description}
+            ${parameters}
+            ${responses}
+            <div class="file-info">
+                <i class="bi bi-file-earmark-code me-2"></i>${endpoint.file}
+            </div>
+        </div>`;
   }
 }

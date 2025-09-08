@@ -870,7 +870,23 @@
             font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
             font-size: 1.1rem;
             font-weight: 600;
-            color: var(--text-primary);
+            color: white !important;
+        }
+
+        .endpoint-url {
+            color: white !important;
+            font-weight: 600;
+        }
+
+        /* Force white color for endpoint descriptions */
+        .endpoint-body .text-muted {
+            color: white !important;
+            font-weight: 500;
+        }
+
+        .endpoint-description {
+            color: white !important;
+            font-weight: 500;
         }
 
         .endpoint-body h6 {
@@ -930,16 +946,16 @@
             </div>
             <div class="navbar-nav ms-auto d-flex align-items-center">
                 <!-- Search Bar -->
-                <div class="nav-item me-3 position-relative">
-                    <div class="input-group" style="width: 320px;">
-                        <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control">
-                        <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" style="display: none;">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <button class="btn btn-primary" type="button" id="searchBtn">
-                            <i class="fas fa-search"></i>
-                        </button>
+                <div class="nav-item me-3 position-relative d-flex align-items-center">
+                    <div class="input-group" style="width: 280px;">
+                        <input type="text" id="searchInput" placeholder="Search endpoints..." class="form-control" style="height: 38px;">
                     </div>
+                    <button class="btn btn-outline-secondary ms-2" type="button" id="clearSearchBtn" style="display: none; height: 38px; width: 38px; padding: 0;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button class="btn btn-primary ms-2" type="button" id="searchBtn" style="height: 38px; width: 38px; padding: 0;">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
         </div>
