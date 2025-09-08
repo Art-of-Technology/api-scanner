@@ -668,7 +668,7 @@ function openInBrowser(filePath: string): void {
 
 async function handleViewMode(options: any): Promise<void> {
   const outputFile = options.output || 'api-documentation.json';
-  const htmlFile = 'api-documentation.html'; // Sabit HTML dosya adı
+  const htmlFile = 'api-documentation.html'; // Fixed HTML file name
   
   if (!fs.existsSync(outputFile)) {
     console.log(chalk.red(`❌ JSON file not found: ${outputFile}`));
