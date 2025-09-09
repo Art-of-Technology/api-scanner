@@ -317,7 +317,7 @@ class ApiEditor {
                 return `
                     <div class="search-preview-card" onclick="editor.showEndpointFromSearch(${originalIndex})">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
+                            <div class="flex-grow-1 me-3" style="min-width: 0;">
                                 <div class="d-flex align-items-center mb-2">
                                     <span class="method-badge method-${(endpoint.method || 'GET').toLowerCase()} me-2">${endpoint.method || 'GET'}</span>
                                     <span class="endpoint-url">${endpoint.url || ''}</span>
@@ -325,7 +325,7 @@ class ApiEditor {
                                 <p class="endpoint-description mb-2">${endpoint.description || 'No description available'}</p>
                                 <small class="text-muted">File: ${(endpoint.file || '').split(/[/\\]/).pop()}</small>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editor.showEndpointFromSearch(${originalIndex})">
+                            <button class="btn btn-sm btn-outline-primary flex-shrink-0" onclick="event.stopPropagation(); editor.showEndpointFromSearch(${originalIndex})">
                                 <i class="bi bi-eye me-1"></i>View Details
                             </button>
                         </div>

@@ -437,6 +437,15 @@
             overflow-y: auto;
             box-shadow: 0 2px 8px var(--shadow);
         }
+        
+        .toc::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .toc {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
 
         .toc h3 {
             color: var(--text-primary);
@@ -606,6 +615,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 8px var(--shadow);
+            overflow: hidden;
         }
 
         .search-preview-card:hover {
@@ -630,6 +640,10 @@
             font-size: 1rem;
             color: var(--text-primary);
             font-weight: 600;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            flex: 1;
+            min-width: 0;
         }
 
         .search-preview-card .endpoint-description {
