@@ -1,0 +1,38 @@
+{
+  "name": "nextjs-with-api-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "generate-docs": "api-scanner --path src/app/api --format json --output public/api-documentation.json"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "api-scanner": "^1.0.3",
+    "tailwindcss": "^4.0.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "class-variance-authority": "^0.7.0",
+    "lucide-react": "^0.363.0",
+    "@radix-ui/react-collapsible": "^1.0.3",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^15.0.0",
+    "typescript": "^5.3.3",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32"
+  }
+}
