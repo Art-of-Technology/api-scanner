@@ -76,7 +76,7 @@ export function TableOfContents({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full h-full overflow-y-auto">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <FileText className="h-5 w-5" />

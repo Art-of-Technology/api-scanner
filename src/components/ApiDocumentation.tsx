@@ -72,7 +72,15 @@ export function ApiDocumentation({
   };
 
   return (
-    <div className={cn('api-documentation w-full', className)} data-theme={theme}>
+    <div 
+      className={cn('api-documentation w-full min-h-screen overflow-y-auto', className)} 
+      data-theme={theme}
+      style={{ 
+        height: '100%',
+        maxHeight: '100vh',
+        overflowY: 'auto'
+      }}
+    >
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-8">

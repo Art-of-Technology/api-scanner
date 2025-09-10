@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -193,7 +193,7 @@ export function EndpointCard({ endpoint, index }: EndpointCardProps) {
   const title = endpoint.title || generateFallbackTitle(endpoint.method, endpoint.url);
 
   return (
-    <Card className="w-full">
+    <Card className="w-full overflow-y-auto">
       <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -217,11 +217,6 @@ export function EndpointCard({ endpoint, index }: EndpointCardProps) {
           )}
         </div>
         
-        {/* File info */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-          <FileCode className="h-4 w-4" />
-          <span>{endpoint.file}</span>
-        </div>
       </CardHeader>
 
       <CardContent className="pt-6">
