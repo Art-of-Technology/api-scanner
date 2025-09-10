@@ -204,7 +204,7 @@ export class Formatter {
   private formatReact(documentation: ApiDocumentation): string {
     // Generate a React component file that uses the ApiDocumentation component
     return `import React from 'react';
-import { ApiDocumentation } from 'api-scanner/client';
+import { ApiDocumentation } from './client';
 
 const ApiDocsPage = () => {
   const apiData = ${JSON.stringify(documentation, null, 2)};
