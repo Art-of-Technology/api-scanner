@@ -14,7 +14,7 @@ module.exports = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
     // Include api-scanner components in content paths
-    './node_modules/api-scanner/dist/**/*.{js,jsx,ts,tsx}',
+    // './node_modules/api-scanner/dist/**/*.{js,jsx,ts,tsx}', // Removed to avoid scanning node_modules
   ],
   prefix: "",
   theme: {
