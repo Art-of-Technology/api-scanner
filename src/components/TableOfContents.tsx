@@ -88,7 +88,7 @@ export function TableOfContents({
           </p>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 max-h-96 overflow-y-auto">
         <div className="space-y-2">
           {Object.entries(groupedEndpoints).map(([category, categoryEndpoints]) => {
             const isExpanded = expandedCategories.has(category) || Boolean(searchQuery?.trim());
