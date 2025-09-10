@@ -1,13 +1,10 @@
 import { ApiDocumentation, ApiEndpoint } from './types';
-import { TemplateEngine } from './template-engine';
 
 export class Formatter {
-  private templateEngine: TemplateEngine;
-
   constructor() {
-    this.templateEngine = new TemplateEngine();
+    // Formatter for JSON, Markdown, Swagger, and React formats
   }
-  async format(documentation: ApiDocumentation, format: 'json' | 'markdown' | 'swagger' | 'html', verbose: boolean = false): Promise<string> {
+  async format(documentation: ApiDocumentation, format: 'json' | 'markdown' | 'swagger' | 'react', verbose: boolean = false): Promise<string> {
     switch (format) {
       case 'json':
         return this.formatJson(documentation);
@@ -15,8 +12,8 @@ export class Formatter {
         return this.formatMarkdown(documentation);
       case 'swagger':
         return this.formatSwagger(documentation);
-      case 'html':
-        return await this.formatHtml(documentation, verbose);
+      case 'react':
+        return this.formatReact(documentation);
       default:
         return this.formatJson(documentation);
     }
@@ -204,174 +201,31 @@ export class Formatter {
     return typeMap[type] || 'string';
   }
 
-  private async formatHtml(documentation: ApiDocumentation, verbose: boolean = false): Promise<string> {
-    const groupedEndpoints = this.groupEndpointsByTags(documentation.endpoints);
-    
-    // Generate sections with progress logging
-    let sectionsHtml = '';
-    const totalGroups = Object.keys(groupedEndpoints).length;
-    let processedGroups = 0;
-    
-    for (const [tag, endpoints] of Object.entries(groupedEndpoints)) {
-        processedGroups++;
-        if (verbose) {
-          console.log(`Processing group ${processedGroups}/${totalGroups}: ${tag} (${endpoints.length} endpoints)`);
-        }
-        
-        const tagId = tag.toLowerCase().replace(/\s+/g, '-');
-        let endpointsHtml = '';
-        
-        // Process endpoints sequentially to avoid async issues
-        for (const endpoint of endpoints) {
-            const endpointHtml = await this.formatEndpointHtml(endpoint);
-            endpointsHtml += endpointHtml;
-        }
-        
-        const sectionHtml = `
-            <div class="section-card">
-                <div class="section-header">
-                    <h2 class="section-title" id="${tagId}">
-                        <i class="bi bi-folder2-open me-2"></i>${tag}
-                    </h2>
-                    <small class="text-muted">
-                        <i class="bi bi-diagram-3 me-1"></i>${endpoints.length} endpoints
-                    </small>
-                </div>
-                <div class="card-body p-4">
-                    ${endpointsHtml}
-                </div>
-            </div>`;
-        
-        sectionsHtml += sectionHtml;
-        if (verbose) {
-          console.log(`  Generated ${endpointsHtml.length} chars for ${endpoints.length} endpoints`);
-        }
-    }
-    
-    if (verbose) {
-      console.log(`Generated ${sectionsHtml.length} characters of sections HTML`);
-    }
-    
-    // Generate hierarchical TOC data for JavaScript
-    const tocData = this.generateTOCData(groupedEndpoints);
-    
-    // Render main template
-    return await this.templateEngine.renderTemplate('html-template', {
-        title: documentation.info.title,
-        description: documentation.info.description || 'Auto-generated API documentation',
-        totalEndpoints: documentation.totalEndpoints,
-        totalCategories: Object.keys(groupedEndpoints).length,
-        version: documentation.info.version,
-        generatedAt: documentation.generatedAt,
-        generatedDate: new Date(documentation.generatedAt).toLocaleDateString('en-US'),
-        endpoints: JSON.stringify(documentation.endpoints),
-        sections: sectionsHtml,
-        tocData: JSON.stringify(tocData)
-    });
+  private formatReact(documentation: ApiDocumentation): string {
+    // Generate a React component file that uses the ApiDocumentation component
+    return `import React from 'react';
+import { ApiDocumentation } from './client';
+
+const ApiDocsPage = () => {
+  const apiData = ${JSON.stringify(documentation, null, 2)};
+
+  return (
+    <div className="min-h-screen bg-background">
+      <ApiDocumentation
+        data={apiData}
+        searchable={true}
+        showStats={true}
+        defaultExpanded={false}
+        theme="system"
+        onEndpointSelect={(endpoint) => {
+          console.log('Selected endpoint:', endpoint);
+        }}
+      />
+    </div>
+  );
+};
+
+export default ApiDocsPage;`;
   }
 
-  private generateTOCData(groupedEndpoints: Record<string, ApiEndpoint[]>): Record<string, any[]> {
-    const tocData: Record<string, any[]> = {};
-    
-    for (const [category, endpoints] of Object.entries(groupedEndpoints)) {
-      tocData[category] = endpoints.map(endpoint => ({
-        method: endpoint.method,
-        url: endpoint.url,
-        description: endpoint.description || '',
-        file: endpoint.file || ''
-      }));
-    }
-    
-    return tocData;
-  }
-
-  private async formatEndpointHtml(endpoint: ApiEndpoint): Promise<string> {
-    const methodClass = `method-${endpoint.method.toLowerCase()}`;
-    
-    // Generate description
-    const description = endpoint.description 
-        ? `<p class="text-muted mb-2">${endpoint.description}</p>`
-        : '';
-
-    // Generate parameters
-    let parameters = '';
-    if (endpoint.parameters.length > 0) {
-        let parameterRows = '';
-        for (const param of endpoint.parameters) {
-            const requiredBadge = param.required ? 'badge bg-danger' : 'badge bg-secondary';
-            const requiredText = param.required ? 'Required' : 'Optional';
-            
-            parameterRows += `
-                <tr>
-                    <td><strong>${param.name}</strong></td>
-                    <td><code>${param.type}</code></td>
-                    <td><span class="${requiredBadge}">${requiredText}</span></td>
-                    <td>${param.location}</td>
-                </tr>`;
-        }
-        
-        parameters = `
-            <div class="mt-4">
-                <h6 class="mb-3">
-                    <i class="bi bi-list-check me-2"></i>Parameters
-                </h6>
-                <div class="table-responsive">
-                    <table class="table parameters-table">
-                        <thead>
-                            <tr>
-                                <th><i class="bi bi-tag me-1"></i>Name</th>
-                                <th><i class="bi bi-code-square me-1"></i>Type</th>
-                                <th><i class="bi bi-exclamation-circle me-1"></i>Required</th>
-                                <th><i class="bi bi-geo-alt me-1"></i>Location</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${parameterRows}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    }
-
-    // Generate responses
-    let responses = '';
-    if (Object.keys(endpoint.responses).length > 0) {
-        let responseItems = '';
-        for (const [statusCode, response] of Object.entries(endpoint.responses)) {
-            responseItems += `
-                <div class="mb-2">
-                    <strong>${statusCode}</strong> - ${response.description}`;
-            
-            if (response.example) {
-                responseItems += `
-                    <pre class="response-example mt-1"><code>${JSON.stringify(response.example, null, 2)}</code></pre>`;
-            }
-            
-            responseItems += `</div>`;
-        }
-        
-        responses = `
-            <div class="mt-4">
-                <h6 class="mb-3">
-                    <i class="bi bi-arrow-return-right me-2"></i>Responses
-                </h6>
-                ${responseItems}
-            </div>`;
-    }
-
-    // Return simple HTML structure (will be replaced by JavaScript in template)
-    return `
-        <div class="endpoint-card">
-            <div class="d-flex align-items-center mb-3">
-                <span class="badge ${methodClass} text-white me-3">${endpoint.method}</span>
-                <code class="endpoint-url flex-grow-1">${endpoint.url}</code>
-            </div>
-            ${description}
-            ${parameters}
-            ${responses}
-            <div class="file-info">
-                <i class="bi bi-file-earmark-code me-2"></i>${endpoint.file}
-            </div>
-        </div>`;
-  }
 }

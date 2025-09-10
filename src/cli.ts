@@ -37,14 +37,11 @@ program
   .argument('[path]', 'Path to scan for API routes (default: src/app/api)')
   .option('-p, --path <path>', 'Path to scan for API routes (default: src/app/api)')
   .option('-o, --output <file>', 'Output file path (default: api-documentation.json)')
-  .option('-f, --format <format>', 'Output format: json, markdown, swagger, html (default: json)')
+  .option('-f, --format <format>', 'Output format: json, markdown, swagger, react (default: json)')
   .option('-v, --verbose', 'Enable verbose output')
   .option('-c, --config <file>', 'Configuration file path (default: .api-scanner.json)')
   .option('-i, --interactive', 'Run in interactive mode')
   .option('--examples', 'Show usage examples')
-  .option('--no-open', 'Do not auto-open HTML files in browser')
-  .option('--view', 'Open HTML documentation viewer')
-  .option('--edit', 'Open HTML editor for JSON data')
   .action(main);
 
 // Handle --examples flag
@@ -73,17 +70,6 @@ async function main(pathArg: string, options: any) {
     return;
   }
 
-  // Handle view mode
-  if (options.view) {
-    await handleViewMode(options);
-    return;
-  }
-
-  // Handle edit mode
-  if (options.edit) {
-    await handleEditMode(options);
-    return;
-  }
 
   console.log(chalk.blue.bold('🔍 API Scanner'));
   console.log(chalk.gray('Next.js API route documentation generator\n'));
@@ -96,7 +82,7 @@ async function main(pathArg: string, options: any) {
     const scannerOptions: ScannerOptions = {
       path: options.path || config.path || 'src/app/api',
       output: options.output || config.output || 'api-documentation.json',
-      format: (options.format || config.format || 'json') as 'json' | 'markdown' | 'swagger' | 'html',
+      format: (options.format || config.format || 'json') as 'json' | 'markdown' | 'swagger' | 'react',
       verbose: options.verbose || false,
       ignore: config.ignore,
       include: config.include
@@ -117,8 +103,8 @@ async function main(pathArg: string, options: any) {
     }
 
     // Use fixed filenames to avoid creating multiple files
-    if (scannerOptions.format === 'html') {
-      scannerOptions.output = 'api-documentation.html';
+    if (scannerOptions.format === 'react') {
+      scannerOptions.output = 'ApiDocsPage.tsx';
     } else if (scannerOptions.format === 'json') {
       scannerOptions.output = 'api-documentation.json';
     } else if (scannerOptions.format === 'markdown') {
@@ -144,9 +130,13 @@ async function main(pathArg: string, options: any) {
       console.log(chalk.green(`📄 Output: ${outputPath}`));
       console.log(chalk.green(`📊 Size: ${(stats.size / 1024).toFixed(2)} KB`));
       
-      // Auto-open HTML files in browser
-      if (scannerOptions.format === 'html' && options.open !== false) {
-        await askToOpenInBrowser(outputPath);
+      // Show usage instructions for React component
+      if (scannerOptions.format === 'react') {
+        console.log(chalk.green('\n📄 React component generated successfully!'));
+        console.log(chalk.gray('\nTo use this component:'));
+        console.log(chalk.gray('  1. Import it in your React app'));
+        console.log(chalk.gray('  2. Make sure api-scanner is installed as a dependency'));
+        console.log(chalk.gray('  3. Use the component in your app'));
       } else if (scannerOptions.verbose) {
         console.log(chalk.gray('\nYou can now use this documentation with:'));
         console.log(chalk.gray('  - Swagger UI'));
@@ -184,8 +174,8 @@ function showDetailedHelp() {
   console.log(chalk.gray('  # Generate Markdown documentation'));
   console.log(chalk.gray('  npx api-scanner --format markdown --output docs/api.md'));
   console.log(chalk.gray(''));
-  console.log(chalk.gray('  # Generate HTML documentation'));
-  console.log(chalk.gray('  npx api-scanner --format html --output docs/api-docs.html'));
+  console.log(chalk.gray('  # Generate React component'));
+  console.log(chalk.gray('  npx api-scanner --format react --output ApiDocsPage.tsx'));
   console.log(chalk.gray(''));
   console.log(chalk.gray('  # Scan specific path'));
   console.log(chalk.gray('  npx api-scanner --path src/app/api/auth'));
@@ -196,18 +186,16 @@ function showDetailedHelp() {
   console.log(chalk.yellow.bold('⚙️  Configuration Options:'));
   console.log(chalk.gray('  --path <path>     Path to scan (default: src/app/api)'));
   console.log(chalk.gray('  --output <file>   Output file (default: api-documentation.json)'));
-  console.log(chalk.gray('  --format <type>   Format: json, markdown, swagger, html'));
+  console.log(chalk.gray('  --format <type>   Format: json, markdown, swagger, react'));
   console.log(chalk.gray('  --verbose         Show detailed output'));
   console.log(chalk.gray('  --config <file>   Config file (default: .api-scanner.json)'));
   console.log(chalk.gray('  --interactive     Run in interactive mode'));
-  console.log(chalk.gray('  --no-open         Do not auto-open HTML files in browser\n'));
   
   console.log(chalk.yellow.bold('📁 Output Formats:'));
   console.log(chalk.gray('  json      - JSON format for programmatic use'));
   console.log(chalk.gray('  swagger   - OpenAPI 3.0 format for Swagger UI'));
   console.log(chalk.gray('  markdown  - Human-readable documentation'));
-  console.log(chalk.gray('  html      - Beautiful HTML documentation (auto-opens in browser)'));
-  console.log(chalk.gray('  html-edit - HTML editor with JSON backend (interactive editing)\n'));
+  console.log(chalk.gray('  react     - React component using ApiDocumentation component\n'));
   
   console.log(chalk.yellow.bold('🔧 Configuration File (.api-scanner.json):'));
   console.log(chalk.gray('  {'));
@@ -446,19 +434,18 @@ async function runInteractiveWizard() {
     console.log(chalk.gray('  1. json - JSON format (programmatic use)'));
     console.log(chalk.gray('  2. swagger - OpenAPI 3.0 (Swagger UI)'));
     console.log(chalk.gray('  3. markdown - Human-readable docs'));
-    console.log(chalk.gray('  4. html - Beautiful HTML documentation'));
-    console.log(chalk.gray('  5. html-edit - HTML editor with JSON backend'));
+    console.log(chalk.gray('  4. react - React component using ApiDocumentation'));
     
-    const formatChoice = await askNumber(chalk.yellow('\n🎯 Choose output format (1-5, default: 1): '), 1, 5, 1);
-    const formatMap: { [key: number]: string } = { 1: 'json', 2: 'swagger', 3: 'markdown', 4: 'html', 5: 'html-edit' };
+    const formatChoice = await askNumber(chalk.yellow('\n🎯 Choose output format (1-4, default: 1): '), 1, 4, 1);
+    const formatMap: { [key: number]: string } = { 1: 'json', 2: 'swagger', 3: 'markdown', 4: 'react' };
     const format = formatMap[formatChoice];
 
     // Ask for output file
-    const defaultOutput = `api-documentation.${format === 'json' ? 'json' : format === 'swagger' ? 'json' : format === 'html' || format === 'html-edit' ? 'html' : 'md'}`;
+    const defaultOutput = `api-documentation.${format === 'json' ? 'json' : format === 'swagger' ? 'json' : format === 'react' ? 'tsx' : 'md'}`;
     console.log(chalk.gray('\n📄 Output file:'));
     console.log(chalk.gray('  Examples:'));
     console.log(chalk.gray('  - api-docs.json'));
-    console.log(chalk.gray('  - documentation.html'));
+    console.log(chalk.gray('  - ApiDocsPage.tsx'));
     console.log(chalk.gray('  - my-api-docs.md'));
     const useDefaultOutput = await askYesNo(chalk.yellow(`\n📄 Use default output file '${defaultOutput}'? (Y/n, default: Y): `), true);
     const outputFile = !useDefaultOutput ? 
@@ -494,83 +481,30 @@ async function runInteractiveWizard() {
     if (runNow) {
       console.log(chalk.blue('\n🔍 Starting API Scanner...\n'));
       
-      if (format === 'html-edit') {
-        // For HTML Edit: First generate JSON, then start editor
-        const jsonOutput = outputFile.replace('.html', '.json');
-        
-        const scannerOptions: ScannerOptions = {
-          path: scanPath,
-          output: jsonOutput,
-          format: 'json' as 'json' | 'markdown' | 'swagger' | 'html',
-          verbose: verbose
-        };
+      // Normal format processing
+      const scannerOptions: ScannerOptions = {
+        path: scanPath,
+        output: outputFile,
+        format: format as 'json' | 'markdown' | 'swagger' | 'react',
+        verbose: verbose
+      };
 
-        const scanner = new ApiScanner(scannerOptions);
-        await scanner.generateDocumentation();
-        
-        console.log(chalk.green('\n✅ JSON documentation generated successfully!'));
-        console.log(chalk.blue('\n🚀 Starting HTML Editor...\n'));
-        
-        // Start editor server
-        try {
-          const { EditorServer } = await import('./server');
-          const server = new EditorServer(jsonOutput);
-          const port = await server.start();
-          
-          console.log(chalk.green(`🚀 Editor server started on ${server.getUrl()}`));
-          console.log(chalk.gray(`📁 Editing JSON file: ${jsonOutput}`));
-          console.log(chalk.yellow('\n💡 Press Ctrl+C to stop the server\n'));
-          
-          // Open browser
-          const { exec } = require('child_process');
-          const command = process.platform === 'win32' ? 'start' : 
-                         process.platform === 'darwin' ? 'open' : 'xdg-open';
-          
-          exec(`${command} ${server.getUrl()}`, (error: any) => {
-            if (error) {
-              console.log(chalk.blue(`📄 Editor available at: ${server.getUrl()}`));
-            } else {
-              console.log(chalk.green(`🌐 Opening editor in browser...`));
-            }
-          });
-
-          // Keep server running
-          process.on('SIGINT', () => {
-            console.log(chalk.yellow('\n🛑 Stopping editor server...'));
-            process.exit(0);
-          });
-
-        } catch (error) {
-          console.error(chalk.red('❌ Failed to start editor server:'), error);
-          process.exit(1);
-        }
-      } else {
-        // Normal format processing
-        const scannerOptions: ScannerOptions = {
-          path: scanPath,
-          output: outputFile,
-          format: format as 'json' | 'markdown' | 'swagger' | 'html',
-          verbose: verbose
-        };
-
-        const scanner = new ApiScanner(scannerOptions);
-        await scanner.generateDocumentation();
-        
-        console.log(chalk.green('\n✅ Documentation generated successfully!'));
-        
-        // Auto-open HTML files in browser
-        if (format === 'html') {
-          const outputPath = path.resolve(outputFile);
-          openInBrowser(outputPath);
-        }
+      const scanner = new ApiScanner(scannerOptions);
+      await scanner.generateDocumentation();
+      
+      console.log(chalk.green('\n✅ Documentation generated successfully!'));
+      
+      // Show usage instructions for React component
+      if (format === 'react') {
+        console.log(chalk.green('\n📄 React component generated successfully!'));
+        console.log(chalk.gray('\nTo use this component:'));
+        console.log(chalk.gray('  1. Import it in your React app'));
+        console.log(chalk.gray('  2. Make sure api-scanner is installed as a dependency'));
+        console.log(chalk.gray('  3. Use the component in your app'));
       }
     } else {
       console.log(chalk.blue('\n💡 To run later, use:'));
-      if (format === 'html-edit') {
-        console.log(chalk.gray(`  npx api-scanner --edit --output ${outputFile.replace('.html', '.json')}`));
-      } else {
-        console.log(chalk.gray(`  npx api-scanner --path ${scanPath} --format ${format} --output ${outputFile}`));
-      }
+      console.log(chalk.gray(`  npx api-scanner --path ${scanPath} --format ${format} --output ${outputFile}`));
     }
 
   } catch (error) {
@@ -593,171 +527,6 @@ async function loadConfig(configPath: string): Promise<ConfigFile> {
   return {};
 }
 
-async function askToOpenInBrowser(filePath: string): Promise<void> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  const question = (query: string): Promise<string> => {
-    return new Promise((resolve) => {
-      rl.question(query, resolve);
-    });
-  };
-
-  const askYesNo = async (query: string, defaultValue: boolean = true): Promise<boolean> => {
-    while (true) {
-      const answer = await question(query);
-      const trimmed = answer.trim().toLowerCase();
-      
-      if (trimmed === '' || trimmed === 'y' || trimmed === 'yes') {
-        return true;
-      } else if (trimmed === 'n' || trimmed === 'no') {
-        return false;
-      } else {
-        console.log(chalk.red('❌ Invalid input. Please enter Y/n or yes/no.'));
-      }
-    }
-  };
-
-  try {
-    const shouldOpen = await askYesNo(chalk.blue('🌐 Open documentation in browser? (Y/n): '), true);
-    
-    if (shouldOpen) {
-      openInBrowser(filePath);
-    } else {
-      console.log(chalk.gray('📄 HTML documentation generated. Open manually when ready.'));
-    }
-  } finally {
-    rl.close();
-  }
-}
-
-function openInBrowser(filePath: string): void {
-  const absolutePath = path.resolve(filePath);
-  
-  // Determine the command based on the platform
-  let command: string;
-  const platform = process.platform;
-  
-  switch (platform) {
-    case 'win32':
-      command = `start "" "${absolutePath}"`;
-      break;
-    case 'darwin':
-      command = `open "${absolutePath}"`;
-      break;
-    case 'linux':
-      command = `xdg-open "${absolutePath}"`;
-      break;
-    default:
-      console.log(chalk.blue(`📄 HTML documentation generated: ${absolutePath}`));
-      console.log(chalk.gray('Open this file in your browser to view the documentation.'));
-      return;
-  }
-  
-  exec(command, (error) => {
-    if (error) {
-      console.log(chalk.blue(`📄 HTML documentation generated: ${absolutePath}`));
-      console.log(chalk.gray('Open this file in your browser to view the documentation.'));
-    } else {
-      console.log(chalk.green(`🌐 Opening documentation in browser...`));
-    }
-  });
-}
-
-async function handleViewMode(options: any): Promise<void> {
-  const outputFile = options.output || 'api-documentation.json';
-  const htmlFile = 'api-documentation.html'; // Fixed HTML file name
-  
-  if (!fs.existsSync(outputFile)) {
-    console.log(chalk.red(`❌ JSON file not found: ${outputFile}`));
-    console.log(chalk.yellow('💡 Generate documentation first with: npx api-scanner'));
-    return;
-  }
-
-  console.log(chalk.blue.bold('🔍 API Scanner - View Mode'));
-  console.log(chalk.gray('Opening HTML documentation viewer...\n'));
-
-  // Check if HTML file exists and is newer than JSON
-  const jsonStats = fs.statSync(outputFile);
-  const htmlExists = fs.existsSync(htmlFile);
-  
-  if (htmlExists) {
-    const htmlStats = fs.statSync(htmlFile);
-    if (htmlStats.mtime > jsonStats.mtime) {
-      console.log(chalk.green('✅ Using existing HTML documentation'));
-      openInBrowser(htmlFile);
-      return;
-    }
-  }
-
-  // Generate HTML from existing JSON
-  const scanner = new ApiScanner({
-    path: options.path || 'src/app/api',
-    output: htmlFile, // Use fixed HTML file name
-    format: 'html',
-    verbose: options.verbose
-  });
-
-  await scanner.generateDocumentation();
-}
-
-async function handleEditMode(options: any): Promise<void> {
-  const outputFile = options.output || 'api-documentation.json';
-  
-  if (!fs.existsSync(outputFile)) {
-    console.log(chalk.red(`❌ JSON file not found: ${outputFile}`));
-    console.log(chalk.yellow('💡 Generate documentation first with: npx api-scanner'));
-    return;
-  }
-
-  console.log(chalk.blue.bold('🔍 API Scanner - Edit Mode'));
-  console.log(chalk.gray('Starting editor server...\n'));
-
-  try {
-    const { EditorServer } = await import('./server');
-    const server = new EditorServer(outputFile);
-    const port = await server.start();
-    
-    console.log(chalk.green(`🚀 Editor server started on ${server.getUrl()}`));
-    console.log(chalk.gray(`📁 Editing JSON file: ${outputFile}`));
-    console.log(chalk.yellow('\n💡 Press Ctrl+C to stop the server\n'));
-    
-    // Open browser
-    if (!options.noOpen) {
-      const { exec } = require('child_process');
-      const url = server.getUrl();
-      
-      let command: string;
-      if (process.platform === 'win32') {
-        command = `start "" "${url}"`;
-      } else if (process.platform === 'darwin') {
-        command = `open "${url}"`;
-      } else {
-        command = `xdg-open "${url}"`;
-      }
-      
-      exec(command, (error: any) => {
-        if (error) {
-          console.log(chalk.blue(`📄 Editor available at: ${url}`));
-        } else {
-          console.log(chalk.green(`🌐 Opening editor in browser...`));
-        }
-      });
-    }
-
-    // Keep server running
-    process.on('SIGINT', () => {
-      console.log(chalk.yellow('\n🛑 Stopping editor server...'));
-      process.exit(0);
-    });
-
-  } catch (error) {
-    console.error(chalk.red('❌ Failed to start editor server:'), error);
-    process.exit(1);
-  }
-}
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
