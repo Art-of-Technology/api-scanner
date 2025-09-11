@@ -1,6 +1,9 @@
 // Main component
 export { ApiDocumentation } from './ApiDocumentation';
 
+// Editor component
+export { EditInterface } from './EditInterface';
+
 // Sub-components (for advanced usage)
 export { EndpointCard } from './EndpointCard';
 export { TableOfContents } from './TableOfContents';

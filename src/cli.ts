@@ -9,6 +9,7 @@ import * as readline from 'readline';
 import { exec } from 'child_process';
 import { ApiScanner } from './scanner';
 import { ScannerOptions, ConfigFile } from './types';
+// Remove edit-server import
 
 const program = new Command();
 
@@ -37,12 +38,201 @@ program
   .argument('[path]', 'Path to scan for API routes (default: src/app/api)')
   .option('-p, --path <path>', 'Path to scan for API routes (default: src/app/api)')
   .option('-o, --output <file>', 'Output file path (default: api-documentation.json)')
-  .option('-f, --format <format>', 'Output format: json, markdown, swagger, react (default: json)')
+  .option('-f, --format <format>', 'Output format: json, json-folder, markdown, swagger, react (default: json-folder)')
   .option('-v, --verbose', 'Enable verbose output')
   .option('-c, --config <file>', 'Configuration file path (default: .api-scanner.json)')
   .option('-i, --interactive', 'Run in interactive mode')
   .option('--examples', 'Show usage examples')
   .action(main);
+
+// Edit command
+program
+  .command('edit')
+  .description('Open the API documentation editor')
+  .option('-p, --port <port>', 'Port for the editor server (default: 3001)', '3001')
+  .action(editCommand);
+
+// Edit command handler
+async function editCommand(options: { port: string }) {
+  console.log(chalk.blue('🔧 API Scanner Editor'));
+  console.log(chalk.gray('Preparing editor...'));
+  
+  // First generate json-folder format if it doesn't exist
+  const publicDir = 'public/api-documentation';
+  if (!await fs.pathExists(publicDir)) {
+    console.log(chalk.yellow('⚠️  No API documentation folder found. Generating...'));
+    
+    try {
+      const scanner = new ApiScanner({
+        path: 'src/app/api',
+        output: 'public/api-documentation',
+        format: 'json-folder',
+        verbose: false
+      });
+      
+      await scanner.generateDocumentation();
+      console.log(chalk.green('✅ API documentation folder generated!'));
+    } catch (error) {
+      console.error(chalk.red('❌ Failed to generate documentation:'), error);
+      process.exit(1);
+    }
+  }
+  
+  // Create edit page and API routes in the project
+  await createEditPage();
+  await createApiRoutes();
+  
+  console.log(chalk.green('✅ Edit page and API routes created!'));
+  console.log(chalk.gray('📁 Edit page: /edit'));
+  console.log(chalk.gray('🔗 API routes: /api/files, /api/file'));
+  console.log(chalk.gray('💡 Start your Next.js dev server and visit /edit'));
+}
+
+async function createEditPage() {
+  const editPageContent = `import React from 'react';
+import { EditInterface } from 'api-scanner/components';
+
+export default function EditPage() {
+  return (
+    <div className="h-screen">
+      <EditInterface />
+    </div>
+  );
+}`;
+
+  // Create pages directory if it doesn't exist
+  const pagesDir = 'pages';
+  const appDir = 'src/app';
+  
+  // Check if it's App Router or Pages Router
+  if (await fs.pathExists(appDir)) {
+    // App Router
+    const editDir = path.join(appDir, 'edit');
+    await fs.ensureDir(editDir);
+    await fs.writeFile(path.join(editDir, 'page.tsx'), editPageContent);
+  } else if (await fs.pathExists(pagesDir)) {
+    // Pages Router
+    await fs.writeFile(path.join(pagesDir, 'edit.tsx'), editPageContent);
+  } else {
+    // Create pages directory
+    await fs.ensureDir(pagesDir);
+    await fs.writeFile(path.join(pagesDir, 'edit.tsx'), editPageContent);
+  }
+}
+
+async function createApiRoutes() {
+  const apiFilesContent = `import { NextRequest, NextResponse } from 'next/server';
+import * as fs from 'fs-extra';
+import * as path from 'path';
+
+export async function GET() {
+  try {
+    const publicDir = 'public/api-documentation';
+    const files = await getFileTree(publicDir);
+    return NextResponse.json(files);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to load files' }, { status: 500 });
+  }
+}
+
+async function getFileTree(dir: string): Promise<any[]> {
+  const files = await fs.readdir(dir);
+  const tree = [];
+  
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    const stat = await fs.stat(filePath);
+    
+    if (stat.isDirectory()) {
+      const children = await getFileTree(filePath);
+      tree.push({
+        name: file,
+        path: file,
+        type: 'folder',
+        children: children.map(child => ({
+          ...child,
+          path: file + '/' + child.path
+        }))
+      });
+    } else if (file.endsWith('.json')) {
+      tree.push({
+        name: file,
+        path: file,
+        type: 'file'
+      });
+    }
+  }
+  
+  return tree;
+}`;
+
+  const apiFileContent = `import { NextRequest, NextResponse } from 'next/server';
+import * as fs from 'fs-extra';
+import * as path from 'path';
+
+export async function GET(request: NextRequest) {
+  const publicDir = 'public/api-documentation';
+  
+  try {
+    const { searchParams } = new URL(request.url);
+    const filePath = searchParams.get('path');
+    
+    if (!filePath) {
+      return NextResponse.json({ error: 'Path parameter required' }, { status: 400 });
+    }
+    
+    const fullPath = path.join(publicDir, filePath);
+    console.log('Reading file:', fullPath);
+    
+    // Check if file exists
+    if (!await fs.pathExists(fullPath)) {
+      return NextResponse.json({ error: \`File not found: \${fullPath}\` }, { status: 404 });
+    }
+    
+    const content = await fs.readFile(fullPath, 'utf-8');
+    return NextResponse.json({ content });
+  } catch (error) {
+    console.error('File read error:', error);
+    return NextResponse.json({ error: \`Failed to read file: \${error instanceof Error ? error.message : 'Unknown error'}\` }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const publicDir = 'public/api-documentation';
+  
+  try {
+    const body = await request.json();
+    const { path: filePath, content } = body;
+    
+    if (!filePath || !content) {
+      return NextResponse.json({ error: 'Path and content required' }, { status: 400 });
+    }
+    
+    const fullPath = path.join(publicDir, filePath);
+    await fs.writeFile(fullPath, content);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
+  }
+}`;
+
+  // Create API routes
+  const apiDir = 'pages/api';
+  const appApiDir = 'src/app/api';
+  
+  if (await fs.pathExists('src/app')) {
+    // App Router
+    await fs.ensureDir(path.join(appApiDir, 'files'));
+    await fs.writeFile(path.join(appApiDir, 'files', 'route.ts'), apiFilesContent);
+    await fs.ensureDir(path.join(appApiDir, 'file'));
+    await fs.writeFile(path.join(appApiDir, 'file', 'route.ts'), apiFileContent);
+  } else {
+    // Pages Router
+    await fs.ensureDir(apiDir);
+    await fs.writeFile(path.join(apiDir, 'files.ts'), apiFilesContent);
+    await fs.writeFile(path.join(apiDir, 'file.ts'), apiFileContent);
+  }
+}
 
 // Handle --examples flag
 if (process.argv.includes('--examples')) {
@@ -102,15 +292,24 @@ async function main(pathArg: string, options: any) {
       process.exit(1);
     }
 
-    // Use fixed filenames to avoid creating multiple files
+    // Use fixed filenames and ensure they go to public folder
+    const publicDir = 'public';
+    
+    // Create public directory if it doesn't exist
+    if (!await fs.pathExists(publicDir)) {
+      await fs.mkdir(publicDir, { recursive: true });
+    }
+    
     if (scannerOptions.format === 'react') {
       scannerOptions.output = 'ApiDocsPage.tsx';
     } else if (scannerOptions.format === 'json') {
-      scannerOptions.output = 'api-documentation.json';
+      scannerOptions.output = path.join(publicDir, 'api-documentation.json');
+    } else if (scannerOptions.format === 'json-folder') {
+      scannerOptions.output = 'public/api-documentation';
     } else if (scannerOptions.format === 'markdown') {
-      scannerOptions.output = 'api-documentation.md';
+      scannerOptions.output = path.join(publicDir, 'api-documentation.md');
     } else if (scannerOptions.format === 'swagger') {
-      scannerOptions.output = 'api-documentation.yaml';
+      scannerOptions.output = path.join(publicDir, 'api-documentation.yaml');
     }
 
     // Create scanner instance

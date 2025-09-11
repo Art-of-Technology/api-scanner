@@ -1,13 +1,17 @@
 import { ApiDocumentation, ApiEndpoint } from './types';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 export class Formatter {
   constructor() {
     // Formatter for JSON, Markdown, Swagger, and React formats
   }
-  async format(documentation: ApiDocumentation, format: 'json' | 'markdown' | 'swagger' | 'react', verbose: boolean = false): Promise<string> {
+  async format(documentation: ApiDocumentation, format: 'json' | 'markdown' | 'swagger' | 'react' | 'json-folder', verbose: boolean = false): Promise<string> {
     switch (format) {
       case 'json':
         return this.formatJson(documentation);
+      case 'json-folder':
+        return this.formatJsonFolder(documentation);
       case 'markdown':
         return this.formatMarkdown(documentation);
       case 'swagger':
@@ -21,6 +25,91 @@ export class Formatter {
 
   private formatJson(documentation: ApiDocumentation): string {
     return JSON.stringify(documentation, null, 2);
+  }
+
+  private async formatJsonFolder(documentation: ApiDocumentation): Promise<string> {
+    const baseDir = 'public/api-documentation';
+    
+    // Create base directory
+    await fs.ensureDir(baseDir);
+    
+    // Create index.json
+    const indexData = {
+      info: documentation.info,
+      generatedAt: documentation.generatedAt,
+      endpoints: documentation.endpoints.map(ep => ({
+        id: this.generateEndpointId(ep),
+        method: ep.method,
+        url: ep.url,
+        title: ep.title,
+        description: ep.description,
+        category: this.extractCategory(ep.url || ''),
+        file: ep.file
+      }))
+    };
+    
+    await fs.writeFile(path.join(baseDir, 'index.json'), JSON.stringify(indexData, null, 2));
+    
+    // Group endpoints by category
+    const groupedEndpoints = this.groupEndpointsByCategory(documentation.endpoints);
+    
+    // Create category folders and individual endpoint files
+    for (const [category, endpoints] of Object.entries(groupedEndpoints)) {
+      const categoryDir = path.join(baseDir, category);
+      await fs.ensureDir(categoryDir);
+      
+      for (const endpoint of endpoints) {
+        const filename = this.generateEndpointFilename(endpoint);
+        const filePath = path.join(categoryDir, filename);
+        
+        const endpointData = {
+          id: this.generateEndpointId(endpoint),
+          method: endpoint.method,
+          url: endpoint.url,
+          title: endpoint.title,
+          description: endpoint.description,
+          parameters: endpoint.parameters,
+          responses: endpoint.responses,
+          file: endpoint.file,
+          category: category
+        };
+        
+        await fs.writeFile(filePath, JSON.stringify(endpointData, null, 2));
+      }
+    }
+    
+    return `JSON folder structure created in ${baseDir}`;
+  }
+
+  private generateEndpointId(endpoint: ApiEndpoint): string {
+    const method = (endpoint.method || 'GET').toLowerCase();
+    const url = (endpoint.url || '').replace(/[^a-zA-Z0-9]/g, '-');
+    return `${method}-${url}`.replace(/^-+|-+$/g, '');
+  }
+
+  private extractCategory(url: string): string {
+    const parts = url.split('/');
+    return parts[2] || 'general';
+  }
+
+  private groupEndpointsByCategory(endpoints: ApiEndpoint[]): { [category: string]: ApiEndpoint[] } {
+    const grouped: { [category: string]: ApiEndpoint[] } = {};
+    
+    endpoints.forEach(endpoint => {
+      const category = this.extractCategory(endpoint.url || '');
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(endpoint);
+    });
+    
+    return grouped;
+  }
+
+  private generateEndpointFilename(endpoint: ApiEndpoint): string {
+    const method = (endpoint.method || 'GET').toLowerCase();
+    const url = (endpoint.url || '').replace(/[^a-zA-Z0-9]/g, '-');
+    return `${method}-${url}.json`.replace(/^-+|-+$/g, '');
   }
 
   private formatMarkdown(documentation: ApiDocumentation): string {
