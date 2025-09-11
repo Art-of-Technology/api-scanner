@@ -55,7 +55,7 @@ export interface ApiDocumentation {
 export interface ScannerOptions {
   path?: string;
   output?: string;
-  format?: 'json' | 'markdown' | 'swagger' | 'react';
+  format?: 'json' | 'json-folder' | 'markdown' | 'swagger' | 'react';
   verbose?: boolean;
   ignore?: string[];
   include?: string[];
@@ -72,7 +72,7 @@ export interface ParsedRoute {
 export interface ConfigFile {
   path?: string;
   output?: string;
-  format?: 'json' | 'markdown' | 'swagger' | 'react';
+  format?: 'json' | 'json-folder' | 'markdown' | 'swagger' | 'react';
   ignore?: string[];
   include?: string[];
 }

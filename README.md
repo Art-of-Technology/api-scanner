@@ -11,18 +11,16 @@ Next.js API route scanner that automatically generates API documentation from yo
 
 ### Core Scanner
 - 🔍 **Automatic Discovery**: Scans your `/api` directory for route files
-- 📝 **Multiple Formats**: JSON, Markdown, Swagger/OpenAPI, HTML, and Editor formats
-- 🌐 **Interactive HTML**: Auto-opening, responsive documentation with Bootstrap UI
-- ✏️ **Editor Mode**: Interactive API documentation editor with hierarchical TOC and real-time search
+- 📝 **Multiple Formats**: JSON, JSON-folder, Markdown, Swagger/OpenAPI, and React formats
 - 🚀 **Next.js App Router**: Supports the new App Router structure (`src/app/api/`)
 - 🔧 **Configurable**: Customize scanning behavior with config files
 - 📊 **Rich Metadata**: Extracts parameters, responses, request headers, and request bodies
 - 🎯 **TypeScript Support**: Full TypeScript support with type definitions
 - 🔍 **Request Analysis**: Automatically detects request headers and request body schemas from TypeScript code
-- ✏️ **Interactive Editing**: Edit request headers, request bodies, and responses in the editor mode
 - 🤖 **Smart Title Generation**: Automatically generates human-readable titles and descriptions for endpoints (e.g., "Create Auth Login", "List Users")
+- 📁 **JSON Folder Structure**: Organizes documentation in hierarchical JSON files for easy management
 
-### React Components (NEW!)
+### React Components
 - ⚛️ **React 19 Compatible**: Built with the latest React and optimized for modern Next.js
 - 🎨 **shadcn/ui Integration**: Uses shadcn/ui components with Tailwind CSS 4.0
 - 🌓 **Dark/Light Theme**: Built-in theme support that follows your project's theme
@@ -32,6 +30,17 @@ Next.js API route scanner that automatically generates API documentation from yo
 - 🏷️ **HTTP Method Badges**: Color-coded badges for different HTTP methods
 - 📋 **Tabbed Interface**: Organized endpoint details with tabs for request/response data
 - 🔗 **Zero Config**: Drop-in component that works with your existing shadcn/ui setup
+
+### Advanced Editor (NEW!)
+- ✏️ **Monaco Editor**: VS Code-powered JSON editor with syntax highlighting
+- 🚀 **Auto-save**: Intelligent auto-save with 5-second delay and change detection
+- ⌨️ **Keyboard Shortcuts**: Ctrl+S for manual save, full keyboard support
+- 🎯 **Live Preview**: Real-time preview of JSON structure and metadata
+- 📁 **File Tree**: Hierarchical file browser with HTTP method badges
+- 🔍 **Smart Search**: Search through files and folders with instant filtering
+- 📊 **Statistics**: Live stats showing file counts, folders, and version info
+- 🎨 **Custom Toast**: Modern toast notifications for save status and errors
+- ⚡ **Performance Optimized**: Lightweight editor with minimal resource usage
 
 ## Installation
 
@@ -54,6 +63,7 @@ npm install tailwindcss-animate
 
 ### React Component Usage (Recommended for Next.js Projects)
 
+#### View Documentation
 Create a docs page in your Next.js app:
 
 ```tsx
@@ -85,6 +95,22 @@ export default function DocsPage() {
       defaultExpanded={false}
       theme="system"
     />
+  );
+}
+```
+
+#### Edit Documentation
+Create an edit page for managing your API documentation:
+
+```tsx
+// app/edit/page.tsx or pages/edit.tsx
+import { EditInterface } from 'api-scanner/components';
+
+export default function EditPage() {
+  return (
+    <div className="h-screen">
+      <EditInterface />
+    </div>
   );
 }
 ```
@@ -128,23 +154,24 @@ npx api-scanner init
 # 📖 Show detailed help and examples
 npx api-scanner help
 
-# 🔍 Basic usage - scans src/app/api and outputs JSON
+# 🔍 Basic usage - scans src/app/api and generates JSON folder structure
 npx api-scanner
 
 # 📄 Custom path and output
 npx api-scanner --path src/app/api --output docs.json
 
-# 📝 Different format
+# 📝 Different formats
+npx api-scanner --format json --output api-docs.json
+npx api-scanner --format json-folder --output public/api-documentation
 npx api-scanner --format markdown --output api-docs.md
+npx api-scanner --format swagger --output openapi.json
+npx api-scanner --format react --output ApiDocsPage.tsx
 
-# 🌐 Generate beautiful HTML documentation (auto-opens in browser)
-npx api-scanner --format html --output api-docs.html
+# ✏️ Open the interactive editor
+npx api-scanner edit
 
-# ✏️ Generate interactive editor mode
-npx api-scanner --format editor --output editor.html
-
-# 🚫 Generate HTML without auto-opening
-npx api-scanner --format html --output api-docs.html --no-open
+# 📊 Generate JSON folder structure (default)
+npx api-scanner --format json-folder --output public/api-documentation
 
 # 🔍 Verbose output
 npx api-scanner --verbose
@@ -218,6 +245,19 @@ Create a `.api-scanner.json` file in your project root:
 ```
 
 ## Output Formats
+
+### JSON Folder Structure (Default)
+Organizes documentation in hierarchical JSON files:
+
+```
+public/api-documentation/
+├── index.json
+├── users/
+│   ├── get-users.json
+│   └── create-user.json
+└── auth/
+    └── login.json
+```
 
 ### JSON Format
 
@@ -375,7 +415,7 @@ Interactive API documentation editor with hierarchical TOC, real-time search, an
 npx api-scanner --format html --output api-docs.html
 
 # Generate interactive editor
-npx api-scanner --format editor --output editor.html
+npx api-scanner --format react --output ApiDocsPage.tsx
 ```
 
 ## Editor Mode Features
@@ -869,13 +909,13 @@ npx api-scanner --format swagger --output openapi.json
   run: |
     npm install api-scanner
     npx api-scanner --format html --output docs/api-docs.html
-    npx api-scanner --format editor --output docs/editor.html
+    npx api-scanner --format react --output docs/ApiDocsPage.tsx
     npx api-scanner --format swagger --output docs/openapi.json
 
 - name: Deploy Documentation
   run: |
     cp docs/api-docs.html public/
-    cp docs/editor.html public/
+    cp docs/ApiDocsPage.tsx src/components/
 ```
 
 ### Custom Templates
