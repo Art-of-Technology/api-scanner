@@ -39,6 +39,57 @@ export interface ApiEndpoint {
   requestBody?: ApiRequestBody;
   tags?: string[];
   summary?: string;
+  requiresAuth?: boolean;
+  responseSchema?: any;
+  codeExamples?: {
+    javascript: string;
+    typescript: string;
+    curl: string;
+    python: string;
+  };
+  errorHandling?: {
+    commonErrors: Array<{
+      statusCode: string;
+      description: string;
+      handling: string;
+    }>;
+    endpointSpecific: Array<{
+      statusCode: string;
+      description: string;
+      handling: string;
+    }>;
+  };
+  rateLimiting?: {
+    enabled: boolean;
+    limits: {
+      requests: number;
+      window: string;
+      burst: number;
+    };
+    headers: { [key: string]: string };
+    handling: string;
+  };
+  pagination?: {
+    supported: boolean;
+    parameters?: {
+      page: { type: string; default: number; description: string };
+      limit: { type: string; default: number; description: string };
+      offset: { type: string; default: number; description: string };
+    };
+    response?: {
+      data: string;
+      pagination: {
+        page: string;
+        limit: string;
+        total: string;
+        pages: string;
+      };
+    };
+    example?: {
+      request: string;
+      response: any;
+    };
+  };
 }
 
 export interface ApiDocumentation {
@@ -46,6 +97,14 @@ export interface ApiDocumentation {
     title: string;
     version: string;
     description?: string;
+    baseUrl?: string;
+    authentication?: {
+      type?: 'bearer' | 'api-key' | 'basic' | 'none';
+      required?: boolean;
+      endpoint?: string;
+      headerName?: string;
+      description?: string;
+    };
   };
   endpoints: ApiEndpoint[];
   totalEndpoints: number;
@@ -59,6 +118,7 @@ export interface ScannerOptions {
   verbose?: boolean;
   ignore?: string[];
   include?: string[];
+  baseUrl?: string;
 }
 
 export interface ParsedRoute {
@@ -75,4 +135,11 @@ export interface ConfigFile {
   format?: 'json' | 'json-folder' | 'markdown' | 'swagger' | 'react';
   ignore?: string[];
   include?: string[];
+  baseUrl?: string;
+  authentication?: {
+    type?: 'bearer' | 'api-key' | 'basic' | 'none';
+    endpoint?: string;
+    required?: boolean;
+    headerName?: string;
+  };
 }

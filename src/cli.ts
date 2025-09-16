@@ -42,6 +42,7 @@ program
   .option('-v, --verbose', 'Enable verbose output')
   .option('-c, --config <file>', 'Configuration file path (default: .api-scanner.json)')
   .option('-i, --interactive', 'Run in interactive mode')
+  .option('-b, --base-url <url>', 'Base URL for API endpoints (default: auto-detect)')
   .option('--examples', 'Show usage examples')
   .action(main);
 
@@ -182,7 +183,7 @@ export async function GET(request: NextRequest) {
     }
     
     const fullPath = path.join(publicDir, filePath);
-    console.log('Reading file:', fullPath);
+    // Reading file for API route
     
     // Check if file exists
     if (!await fs.pathExists(fullPath)) {
@@ -275,7 +276,8 @@ async function main(pathArg: string, options: any) {
       format: (options.format || config.format || 'json') as 'json' | 'markdown' | 'swagger' | 'react',
       verbose: options.verbose || false,
       ignore: config.ignore,
-      include: config.include
+      include: config.include,
+      baseUrl: options.baseUrl || config.baseUrl
     };
 
     if (scannerOptions.verbose) {
@@ -324,10 +326,25 @@ async function main(pathArg: string, options: any) {
       
       // Show summary
       const outputPath = path.resolve(scannerOptions.output!);
-      const stats = await fs.stat(outputPath);
       
-      console.log(chalk.green(`📄 Output: ${outputPath}`));
-      console.log(chalk.green(`📊 Size: ${(stats.size / 1024).toFixed(2)} KB`));
+      if (scannerOptions.format === 'json-folder') {
+        // For json-folder format, check if directory exists
+        if (await fs.pathExists(outputPath)) {
+          console.log(chalk.green(`📄 Output: ${outputPath}`));
+          console.log(chalk.green(`📊 Directory created successfully`));
+        } else {
+          console.log(chalk.yellow(`⚠️  Warning: Output directory not found at ${outputPath}`));
+        }
+      } else {
+        // For other formats, check if file exists
+        if (await fs.pathExists(outputPath)) {
+          const stats = await fs.stat(outputPath);
+          console.log(chalk.green(`📄 Output: ${outputPath}`));
+          console.log(chalk.green(`📊 Size: ${(stats.size / 1024).toFixed(2)} KB`));
+        } else {
+          console.log(chalk.yellow(`⚠️  Warning: Output file not found at ${outputPath}`));
+        }
+      }
       
       // Show usage instructions for React component
       if (scannerOptions.format === 'react') {

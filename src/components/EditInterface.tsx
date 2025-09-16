@@ -18,8 +18,6 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
-  Activity,
-  FolderOpen,
   Tag,
   Calendar
 } from 'lucide-react';
@@ -534,7 +532,8 @@ export function EditInterface({ className }: EditInterfaceProps) {
                         suggestOnTriggerCharacters: false,
                         acceptSuggestionOnEnter: 'off',
                         tabCompletion: 'off',
-                        wordBasedSuggestions: 'off'
+                        wordBasedSuggestions: 'off',
+                        theme: 'vs-dark'
                       }}
                       theme="vs-dark"
                     />
