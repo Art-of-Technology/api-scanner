@@ -43,8 +43,15 @@ export function EditInterface({ className }: EditInterfaceProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [parsedContent, setParsedContent] = useState<any>(null);
-  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [lastSavedContent, setLastSavedContent] = useState<string>('');
+  const [selectedEndpoint, setSelectedEndpoint] = useState<any>(null);
+  const [endpoints, setEndpoints] = useState<any[]>([]);
+
+  // Auto-select first endpoint
+  useEffect(() => {
+    if (endpoints.length > 0 && !selectedEndpoint) {
+      setSelectedEndpoint(endpoints[0]);
+    }
+  }, [endpoints, selectedEndpoint]);
 
   // Load file tree
   useEffect(() => {
@@ -78,117 +85,169 @@ export function EditInterface({ className }: EditInterfaceProps) {
       try {
         const parsed = JSON.parse(fileContent);
         setParsedContent(parsed);
+        
+        // Extract endpoints from parsed content
+        if (parsed && parsed.endpoints && Array.isArray(parsed.endpoints)) {
+          setEndpoints(parsed.endpoints);
+        } else if (parsed && (parsed.method || parsed.url || parsed.path)) {
+          setEndpoints([parsed]);
+        } else {
+          setEndpoints([]);
+        }
       } catch (error) {
         setParsedContent(null);
+        setEndpoints([]);
       }
     } else {
       setParsedContent(null);
+      setEndpoints([]);
     }
   }, [fileContent]);
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (selectedFile && fileContent) {
-      // Clear existing timeout
-      if (autoSaveTimeout) {
-        clearTimeout(autoSaveTimeout);
-      }
-
-      // Set new timeout for auto-save (5 seconds delay)
-      const timeout = setTimeout(() => {
-        autoSave();
-      }, 5000);
-
-      setAutoSaveTimeout(timeout);
-
-      // Cleanup timeout on unmount
-      return () => {
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-      };
-    }
-  }, [fileContent, selectedFile]);
-
-  const autoSave = async () => {
-    if (!selectedFile) return;
-
-    // Only save if content has actually changed
-    if (fileContent === lastSavedContent) {
-      return;
-    }
-
-    try {
-      const cleanPath = selectedFile.startsWith('/') ? selectedFile.slice(1) : selectedFile;
-      const response = await fetch('/api/file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: cleanPath, content: fileContent })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Auto-save failed: ${errorData.error || response.statusText}`);
-      }
-
-      // Update last saved content and show toast only if there was a change
-      setLastSavedContent(fileContent);
-      setToast({ message: 'Auto-saved', type: 'success' });
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      // Don't show error toast for auto-save failures to avoid spam
-    }
-  };
 
   const loadFileTree = async () => {
     try {
-      const response = await fetch('/api/files');
-      if (!response.ok) {
-        throw new Error('Failed to load files');
+      // Directly load from main JSON file (no API routes needed)
+      const response = await fetch('/api-documentation.json');
+      if (response.ok) {
+        const content = await response.text();
+        const parsed = JSON.parse(content);
+        
+        if (parsed && parsed.endpoints && Array.isArray(parsed.endpoints)) {
+          // Create virtual file tree from JSON endpoints
+          const virtualTree = createVirtualFileTree(parsed.endpoints);
+          setFileTree(virtualTree);
+          return;
+        }
       }
-      const files = await response.json();
-      setFileTree(files);
+      
+      // Fallback: create empty tree
+      setFileTree([]);
     } catch (error) {
       console.error('Failed to load file tree:', error);
+      setFileTree([]);
     }
+  };
+
+  const createVirtualFileTree = (endpoints: any[]): FileNode[] => {
+    const tree: FileNode[] = [];
+    const categories: { [key: string]: any[] } = {};
+    
+    // Group endpoints by category (extract from URL)
+    endpoints.forEach(endpoint => {
+      const category = extractCategoryFromUrl(endpoint.url || endpoint.path || '');
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push(endpoint);
+    });
+    
+    // Create category folders
+    Object.keys(categories).forEach(category => {
+      const categoryEndpoints = categories[category];
+      const children: FileNode[] = [];
+      
+      categoryEndpoints.forEach((endpoint, index) => {
+        const method = endpoint.method || 'GET';
+        const url = endpoint.url || endpoint.path || 'unknown';
+        const filename = `${method.toLowerCase()}--${url.replace(/[^a-zA-Z0-9]/g, '-')}.json`;
+        
+        children.push({
+          name: filename,
+          path: `${category}/${filename}`,
+          type: 'file',
+          content: JSON.stringify(endpoint, null, 2)
+        });
+      });
+      
+      tree.push({
+        name: category,
+        path: category,
+        type: 'folder',
+        children
+      });
+    });
+    
+    return tree;
+  };
+
+  const extractCategoryFromUrl = (url: string): string => {
+    if (!url) return 'general';
+    
+    // Remove leading slash and split by slash
+    const pathParts = url.replace(/^\//, '').split('/');
+    
+    // Get the first meaningful part after 'api'
+    if (pathParts[0] === 'api' && pathParts.length > 1) {
+      return pathParts[1]; // e.g., /api/posts -> posts
+    }
+    
+    // If no 'api' prefix, use first part
+    if (pathParts.length > 0) {
+      return pathParts[0];
+    }
+    
+    return 'general';
   };
 
   const loadFileContent = async (filePath: string) => {
     try {
-      const response = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to load file: ${errorData.error || response.statusText}`);
+      // First check if it's a virtual file (from our virtual tree)
+      const virtualFile = findVirtualFile(fileTree, filePath);
+      if (virtualFile && virtualFile.content) {
+        // Parse the full content for endpoint details
+        const fullEndpoint = JSON.parse(virtualFile.content);
+        
+        // Create clean version for JSON editor (only essential fields)
+        const cleanEndpoint = {
+          method: fullEndpoint.method,
+          url: fullEndpoint.url || fullEndpoint.path,
+          file: fullEndpoint.file,
+          title: fullEndpoint.title,
+          description: fullEndpoint.description,
+          parameters: fullEndpoint.parameters || [],
+          responses: fullEndpoint.responses || {},
+          requestHeaders: fullEndpoint.requestHeaders || [],
+          tags: fullEndpoint.tags || [],
+          summary: fullEndpoint.summary
+        };
+        
+        setFileContent(JSON.stringify(cleanEndpoint, null, 2));
+        
+        // Set the FULL endpoint for details panel
+        setSelectedEndpoint(fullEndpoint);
+        setSelectedFile(filePath);
+        return;
       }
-      const data = await response.json();
-      setFileContent(data.content);
-      setLastSavedContent(data.content);
-      setSelectedFile(filePath);
+      
+      // If virtual file not found, show error
+      throw new Error(`File not found: ${filePath}`);
     } catch (error) {
       console.error('Failed to load file content:', error);
       setToast({ message: `Failed to load file: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
     }
   };
 
+  const findVirtualFile = (nodes: FileNode[], targetPath: string): FileNode | null => {
+    for (const node of nodes) {
+      if (node.path === targetPath && node.type === 'file') {
+        return node;
+      }
+      if (node.children) {
+        const found = findVirtualFile(node.children, targetPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const saveFile = async () => {
     if (!selectedFile) return;
     
     try {
-      // Remove leading slash if present
-      const cleanPath = selectedFile.startsWith('/') ? selectedFile.slice(1) : selectedFile;
-      const response = await fetch('/api/file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: cleanPath, content: fileContent })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to save file: ${errorData.error || response.statusText}`);
-      }
-      
-      setLastSavedContent(fileContent);
-      setToast({ message: 'File saved successfully!', type: 'success' });
+      // For virtual files, we can't actually save individual files
+      // This is a limitation of the virtual file system
+      setToast({ message: 'Virtual files cannot be saved individually. Use the main JSON file for persistence.', type: 'error' });
     } catch (error) {
       console.error('Failed to save file:', error);
       setToast({ message: `Failed to save file: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
@@ -219,6 +278,10 @@ export function EditInterface({ className }: EditInterfaceProps) {
         {method}
       </Badge>
     );
+  };
+
+  const handleEndpointSelect = (endpoint: any) => {
+    setSelectedEndpoint(endpoint);
   };
 
   // Filter file tree based on search query
@@ -492,7 +555,7 @@ export function EditInterface({ className }: EditInterfaceProps) {
                       onChange={(value) => setFileContent(value || '')}
                       options={{
                         minimap: { enabled: false },
-                        scrollBeyondLastLine: true,
+                        scrollBeyondLastLine: false,
                         fontSize: 14,
                         lineNumbers: 'on',
                         wordWrap: 'on',
@@ -505,8 +568,8 @@ export function EditInterface({ className }: EditInterfaceProps) {
                         scrollbar: {
                           vertical: 'auto',
                           horizontal: 'auto',
-                          verticalScrollbarSize: 8,
-                          horizontalScrollbarSize: 8
+                          verticalScrollbarSize: 6,
+                          horizontalScrollbarSize: 6
                         },
                         guides: {
                           indentation: false,
@@ -551,49 +614,404 @@ export function EditInterface({ className }: EditInterfaceProps) {
             </Card>
           </div>
 
-          {/* Right Panel - Live Preview */}
-          <div className="w-80 flex-shrink-0">
+          {/* Right Panel - Endpoint Details */}
+          <div className="w-96 flex-shrink-0">
             <Card className="w-full h-full flex flex-col">
               <CardHeader className="pb-3 flex-shrink-0">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Preview
+                  <Search className="h-5 w-5" />
+                  Endpoint Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 flex-1 overflow-y-auto">
-                {selectedFile ? (
+                {selectedFile && endpoints.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="p-4 border rounded bg-muted/30">
-                      <h3 className="font-semibold mb-2 text-sm">File Info</h3>
-                      <div className="space-y-1 text-xs">
-                        <div><strong>Description:</strong> {parsedContent?.description || 'No description'}</div>
-                        <div><strong>Size:</strong> {fileContent.length} characters</div>
-                        <div><strong>Type:</strong> JSON</div>
-                      </div>
-                    </div>
                     
-                    <div className="p-4 border rounded bg-muted/30">
-                      <h3 className="font-semibold mb-2 text-sm">JSON Structure</h3>
-                      <div className="space-y-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Method:</span>
-                          {parsedContent?.method ? renderMethodBadge(parsedContent.method) : <Badge variant="outline">N/A</Badge>}
+                    {/* Endpoint List */}
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Available Endpoints</h3>
+                      {endpoints.map((endpoint, index) => (
+                        <div
+                          key={index}
+                          className={`p-3 border rounded cursor-pointer transition-colors ${
+                            selectedEndpoint === endpoint 
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' 
+                              : 'hover:bg-muted/50'
+                          }`}
+                          onClick={() => handleEndpointSelect(endpoint)}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            {renderMethodBadge(endpoint.method || 'GET')}
+                            <span className="font-mono text-sm truncate">{endpoint.url || endpoint.path || 'N/A'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {endpoint.title || endpoint.description || 'No description'}
+                          </p>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs">id</Badge>
-                          <Badge variant="outline" className="text-xs">url</Badge>
-                          <Badge variant="outline" className="text-xs">title</Badge>
-                          <Badge variant="outline" className="text-xs">description</Badge>
+                      ))}
+                    </div>
+
+                    {/* Selected Endpoint Details */}
+                    {selectedEndpoint && (
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded bg-muted/30">
+                          <h3 className="font-semibold mb-3 text-sm">Selected Endpoint</h3>
+                          
+                          {/* Tab Structure */}
+                          <Tabs defaultValue="overview" className="w-full">
+                            <TabsList className="grid w-full grid-cols-4 mb-4">
+                              <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                              <TabsTrigger value="request" className="text-xs">Request</TabsTrigger>
+                              <TabsTrigger value="response" className="text-xs">Response</TabsTrigger>
+                              <TabsTrigger value="examples" className="text-xs">Examples</TabsTrigger>
+                            </TabsList>
+                            
+                            {/* Overview Tab */}
+                            <TabsContent value="overview" className="space-y-3">
+                              <div className="space-y-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Method:</span>
+                              {renderMethodBadge(selectedEndpoint.method || 'GET')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">URL:</span>
+                              <span className="font-mono">{selectedEndpoint.url || selectedEndpoint.path || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Title:</span>
+                              <span>{selectedEndpoint.title || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Description:</span>
+                              <span>{selectedEndpoint.description || 'N/A'}</span>
+                            </div>
+                              </div>
+                            </TabsContent>
+                            
+         {/* Request Tab */}
+         <TabsContent value="request" className="space-y-3">
+           <div className="space-y-3 text-xs">
+             
+             <div>
+               <h4 className="font-medium mb-2">Parameters</h4>
+               {selectedEndpoint.parameters && Array.isArray(selectedEndpoint.parameters) && selectedEndpoint.parameters.length > 0 ? (
+                 <div className="space-y-2">
+                   {selectedEndpoint.parameters.map((param: any, index: number) => (
+                     <div key={index} className="p-2 border rounded bg-muted/50">
+                       <div className="flex items-center gap-2 mb-1">
+                         <span className="font-mono text-xs">{param.name}</span>
+                         <Badge variant="outline" className="text-xs">{param.type || 'string'}</Badge>
+                         {param.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                       </div>
+                       <p className="text-muted-foreground">{param.description || 'No description'}</p>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="p-2 border rounded bg-muted/50">
+                   <p className="text-muted-foreground text-sm">
+                     {selectedEndpoint.parameters ? 
+                       (Array.isArray(selectedEndpoint.parameters) ? 
+                         'No parameters defined (empty array)' : 
+                         'Parameters data exists but not in array format') : 
+                       'No parameters defined'}
+                   </p>
+                   {selectedEndpoint.parameters && !Array.isArray(selectedEndpoint.parameters) && (
+                     <div className="mt-2">
+                       <span className="text-xs font-medium">Raw data:</span>
+                       <pre className="text-xs mt-1 p-2 bg-background border rounded overflow-x-auto">
+                         {JSON.stringify(selectedEndpoint.parameters, null, 2)}
+                       </pre>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
+                                
+             
+             <div>
+               <h4 className="font-medium mb-2">Request Body</h4>
+               {selectedEndpoint.requestBody ? (
+                 <div className="p-2 border rounded bg-muted/50">
+                   <div className="flex items-center gap-2 mb-1">
+                     <span className="text-muted-foreground">Type:</span>
+                     <Badge variant="outline" className="text-xs">{selectedEndpoint.requestBody.type || 'application/json'}</Badge>
+                   </div>
+                   <p className="text-muted-foreground">{selectedEndpoint.requestBody.description || 'No description'}</p>
+                 </div>
+               ) : (
+                 <p className="text-muted-foreground">No request body defined</p>
+               )}
+             </div>
+                                
+             
+             <div>
+               <h4 className="font-medium mb-2">Headers</h4>
+               {selectedEndpoint.requestHeaders && Array.isArray(selectedEndpoint.requestHeaders) && selectedEndpoint.requestHeaders.length > 0 ? (
+                 <div className="space-y-1">
+                   {selectedEndpoint.requestHeaders.map((header: any, index: number) => (
+                     <div key={index} className="flex items-center gap-2 p-1 border rounded">
+                       <span className="font-mono text-xs">{header.name}</span>
+                       <span className="text-muted-foreground text-xs">{header.description || 'No description'}</span>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="p-2 border rounded bg-muted/50">
+                   <p className="text-muted-foreground text-sm">
+                     {selectedEndpoint.requestHeaders ? 
+                       (Array.isArray(selectedEndpoint.requestHeaders) ? 
+                         'No headers defined (empty array)' : 
+                         'Headers data exists but not in array format') : 
+                       'No headers defined'}
+                   </p>
+                   {selectedEndpoint.requestHeaders && !Array.isArray(selectedEndpoint.requestHeaders) && (
+                     <div className="mt-2">
+                       <span className="text-xs font-medium">Raw data:</span>
+                       <pre className="text-xs mt-1 p-2 bg-background border rounded overflow-x-auto">
+                         {JSON.stringify(selectedEndpoint.requestHeaders, null, 2)}
+                       </pre>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
+                              </div>
+                            </TabsContent>
+                            
+         {/* Response Tab */}
+         <TabsContent value="response" className="space-y-3">
+           <div className="space-y-3 text-xs">
+             <div>
+               <h4 className="font-medium mb-2">Response Codes</h4>
+               {selectedEndpoint.responses && Object.keys(selectedEndpoint.responses).length > 0 ? (
+                 <div className="space-y-2">
+                   {Object.entries(selectedEndpoint.responses).map(([code, response]: [string, any]) => (
+                     <div key={code} className="p-2 border rounded bg-muted/50">
+                       <div className="flex items-center gap-2 mb-1">
+                         <Badge variant={code.startsWith('2') ? "default" : code.startsWith('4') ? "destructive" : "secondary"} className="text-xs">
+                           {code}
+                         </Badge>
+                         <span className="font-medium">{response.description || 'No description'}</span>
+                       </div>
+                       {response.example && (
+                         <div className="mt-2">
+                           <span className="text-muted-foreground text-xs">Example:</span>
+                           <div className="mt-1 p-2 bg-background border rounded">
+                             <pre className="text-xs overflow-x-auto">
+                               {JSON.stringify(response.example, null, 2)}
+                             </pre>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <p className="text-muted-foreground">No response information available</p>
+               )}
+             </div>
+             
+             {selectedEndpoint.errorHandling && (
+               <div>
+                 <h4 className="font-medium mb-2">Error Responses</h4>
+                 <div className="space-y-2">
+                   {selectedEndpoint.errorHandling.commonErrors && selectedEndpoint.errorHandling.commonErrors.map((error: any, index: number) => (
+                     <div key={index} className="p-2 border rounded bg-muted/50">
+                       <div className="flex items-center gap-2 mb-1">
+                         <Badge variant={error.statusCode.startsWith('4') ? "destructive" : error.statusCode.startsWith('5') ? "secondary" : "default"} className="text-xs">
+                           {error.statusCode}
+                         </Badge>
+                         <span className="font-medium">{error.description}</span>
+                       </div>
+                       {error.handling && (
+                         <div className="mt-2">
+                           <span className="text-muted-foreground text-xs">Handling:</span>
+                           <p className="text-xs mt-1">{error.handling}</p>
+                         </div>
+                       )}
+                       {error.example && (
+                         <div className="mt-2">
+                           <span className="text-muted-foreground text-xs">Example:</span>
+                           <div className="mt-1 p-2 bg-background border rounded">
+                             <pre className="text-xs overflow-x-auto">
+                               {JSON.stringify(error.example, null, 2)}
+                             </pre>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+             
+             {selectedEndpoint.responseSchema && (
+               <div>
+                 <h4 className="font-medium mb-2">Response Schema</h4>
+                 <div className="p-2 border rounded bg-muted/50">
+                   <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                     {JSON.stringify(selectedEndpoint.responseSchema, null, 2)}
+                   </pre>
+                 </div>
+               </div>
+             )}
+                              </div>
+                            </TabsContent>
+                            
+         {/* Examples Tab */}
+         <TabsContent value="examples" className="space-y-3">
+           <div className="space-y-3 text-xs">
+             {selectedEndpoint.codeExamples && (Array.isArray(selectedEndpoint.codeExamples) ? selectedEndpoint.codeExamples.length > 0 : Object.keys(selectedEndpoint.codeExamples).length > 0) ? (
+                                  <div>
+                                    <h4 className="font-medium mb-2">Code Examples</h4>
+                                    <div className="space-y-2">
+                                      {Array.isArray(selectedEndpoint.codeExamples) ? selectedEndpoint.codeExamples.map((example: any, index: number) => (
+                                        <div key={index} className="border rounded">
+                                          <div className="p-2 border-b bg-muted/50">
+                                            <span className="font-medium text-xs">{example.language || 'Code'}</span>
+                                          </div>
+                                          <div className="p-2">
+                                            <pre className="text-xs overflow-x-auto whitespace-pre-wrap bg-background border rounded p-2">
+                                              {example.code || 'No code available'}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      )) : (
+                                        <div className="border rounded">
+                                          <div className="p-2 border-b bg-muted/50">
+                                            <span className="font-medium text-xs">{selectedEndpoint.codeExamples.language || 'Code'}</span>
+                                          </div>
+                                          <div className="p-2">
+                                            <pre className="text-xs overflow-x-auto whitespace-pre-wrap bg-background border rounded p-2">
+                                              {selectedEndpoint.codeExamples.example || selectedEndpoint.codeExamples.code || 'No code available'}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-muted-foreground">No code examples available</p>
+                                )}
+                                
+                                
+             
+             <div>
+               <h4 className="font-medium mb-2">Rate Limiting</h4>
+               {selectedEndpoint.rateLimiting ? (
+                 <div className="p-2 border rounded bg-muted/50">
+                   <p className="text-sm">{selectedEndpoint.rateLimiting.description || 'Rate limiting information available'}</p>
+                   
+                   {selectedEndpoint.rateLimiting.enabled !== undefined && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Enabled:</span>
+                       <span className="ml-2 text-xs">{selectedEndpoint.rateLimiting.enabled ? 'Yes' : 'No'}</span>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.rateLimiting.limits && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Limits:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.rateLimiting.limits, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.rateLimiting.headers && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Headers:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.rateLimiting.headers, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.rateLimiting.handling && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Handling:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.rateLimiting.handling, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               ) : (
+                 <p className="text-muted-foreground">No rate limiting information</p>
+               )}
+             </div>
+                                
+             
+             <div>
+               <h4 className="font-medium mb-2">Pagination</h4>
+               {selectedEndpoint.pagination ? (
+                 <div className="p-2 border rounded bg-muted/50">
+                   <p className="text-sm">{selectedEndpoint.pagination.description || 'Pagination information available'}</p>
+                   
+                   {selectedEndpoint.pagination.supported !== undefined && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Supported:</span>
+                       <span className="ml-2 text-xs">{selectedEndpoint.pagination.supported ? 'Yes' : 'No'}</span>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.pagination.parameters && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Parameters:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.pagination.parameters, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.pagination.response && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Response:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.pagination.response, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                   
+                   {selectedEndpoint.pagination.example && (
+                     <div className="mt-2">
+                       <span className="font-medium text-xs">Example:</span>
+                       <div className="mt-1 text-xs">
+                         <pre className="text-xs overflow-x-auto">
+                           {JSON.stringify(selectedEndpoint.pagination.example, null, 2)}
+                         </pre>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               ) : (
+                 <p className="text-muted-foreground">No pagination information</p>
+               )}
+             </div>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                   ) : (
                     <div className="h-full flex items-start justify-center text-muted-foreground pt-8">
                       <div className="text-center">
                         <div className="text-4xl mb-4">👁️</div>
-                        <h3 className="text-lg font-semibold mb-2">Preview will appear here</h3>
-                        <p>Select a file to see its preview</p>
+                        <h3 className="text-lg font-semibold mb-2">Endpoint details will appear here</h3>
+                        <p>Select a file with endpoints to see details</p>
                       </div>
                     </div>
                   )}
