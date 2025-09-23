@@ -545,17 +545,17 @@ export function EditInterface({ className }: EditInterfaceProps) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 pt-6 overflow-hidden">
+              <CardContent className="flex-1 pt-6 overflow-auto">
                 {selectedFile ? (
-                  <div className="h-full border rounded overflow-hidden">
+                  <div className="h-full border rounded overflow-auto">
                     <Editor
-                      height="100%"
+                      height="calc(100vh - 200px)"
                       defaultLanguage="json"
                       value={fileContent}
                       onChange={(value) => setFileContent(value || '')}
                       options={{
                         minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
+                        scrollBeyondLastLine: true,
                         fontSize: 14,
                         lineNumbers: 'on',
                         wordWrap: 'on',
@@ -566,10 +566,13 @@ export function EditInterface({ className }: EditInterfaceProps) {
                         formatOnType: false,
                         bracketPairColorization: { enabled: false },
                         scrollbar: {
-                          vertical: 'auto',
-                          horizontal: 'auto',
-                          verticalScrollbarSize: 6,
-                          horizontalScrollbarSize: 6
+                          vertical: 'visible',
+                          horizontal: 'visible',
+                          verticalScrollbarSize: 12,
+                          horizontalScrollbarSize: 12,
+                          useShadows: false,
+                          verticalHasArrows: false,
+                          horizontalHasArrows: false
                         },
                         guides: {
                           indentation: false,
@@ -596,6 +599,10 @@ export function EditInterface({ className }: EditInterfaceProps) {
                         acceptSuggestionOnEnter: 'off',
                         tabCompletion: 'off',
                         wordBasedSuggestions: 'off',
+                        mouseWheelScrollSensitivity: 1,
+                        fastScrollSensitivity: 5,
+                        cursorBlinking: 'blink',
+                        cursorSmoothCaretAnimation: 'on',
                         theme: 'vs-dark'
                       }}
                       theme="vs-dark"
