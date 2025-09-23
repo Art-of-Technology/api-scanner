@@ -128,7 +128,8 @@ export class Parser {
       requestHeaders,
       requestBody,
       tags,
-      summary: description
+      summary: description,
+      authentication: this.extractAuthentication(content, method)
     };
   }
 
@@ -285,45 +286,75 @@ export class Parser {
   private extractResponses(content: string, method: string): Record<string, ApiResponse> {
     const responses: Record<string, ApiResponse> = {};
 
-    // Default responses based on HTTP method
-    if (method === 'GET') {
+    // Try to extract real response data from code
+    const realResponseData = this.extractRealResponseData(content, method);
+    const requiredFields = this.extractResponseRequiredFields(content, method);
+    
+    if (realResponseData) {
       responses['200'] = {
         statusCode: '200',
         description: 'Success',
-        example: { data: [] }
+        example: realResponseData,
+        requiredFields: requiredFields.required,
+        optionalFields: requiredFields.optional
       };
-      responses['404'] = {
-        statusCode: '404',
-        description: 'Not found',
-        example: { error: 'Resource not found' }
-      };
-    } else if (['POST', 'PUT', 'PATCH'].includes(method)) {
-      responses['200'] = {
-        statusCode: '200',
-        description: 'Success',
-        example: { success: true }
-      };
-      responses['201'] = {
-        statusCode: '201',
-        description: 'Created',
-        example: { id: '123', success: true }
-      };
-      responses['400'] = {
-        statusCode: '400',
-        description: 'Bad request',
-        example: { error: 'Invalid input' }
-      };
-    } else if (method === 'DELETE') {
-      responses['200'] = {
-        statusCode: '200',
-        description: 'Success',
-        example: { success: true }
-      };
-      responses['404'] = {
-        statusCode: '404',
-        description: 'Not found',
-        example: { error: 'Resource not found' }
-      };
+    } else {
+      // Default responses based on HTTP method
+      const requiredFields = this.extractResponseRequiredFields(content, method);
+      
+      if (method === 'GET') {
+        responses['200'] = {
+          statusCode: '200',
+          description: 'Success',
+          example: { data: [] },
+          requiredFields: requiredFields.required,
+          optionalFields: requiredFields.optional
+        };
+        responses['404'] = {
+          statusCode: '404',
+          description: 'Not found',
+          example: { error: 'Resource not found' },
+          requiredFields: ['error'],
+          optionalFields: []
+        };
+      } else if (['POST', 'PUT', 'PATCH'].includes(method)) {
+        responses['200'] = {
+          statusCode: '200',
+          description: 'Success',
+          example: { success: true },
+          requiredFields: ['success'],
+          optionalFields: []
+        };
+        responses['201'] = {
+          statusCode: '201',
+          description: 'Created',
+          example: { id: '123', success: true },
+          requiredFields: ['id', 'success'],
+          optionalFields: []
+        };
+        responses['400'] = {
+          statusCode: '400',
+          description: 'Bad request',
+          example: { error: 'Invalid input' },
+          requiredFields: ['error'],
+          optionalFields: []
+        };
+      } else if (method === 'DELETE') {
+        responses['200'] = {
+          statusCode: '200',
+          description: 'Success',
+          example: { success: true },
+          requiredFields: ['success'],
+          optionalFields: []
+        };
+        responses['404'] = {
+          statusCode: '404',
+          description: 'Not found',
+          example: { error: 'Resource not found' },
+          requiredFields: ['error'],
+          optionalFields: []
+        };
+      }
     }
 
     // Try to extract custom responses from JSDoc
@@ -351,10 +382,13 @@ export class Parser {
             }
           }
           
+          const requiredFields = this.extractResponseRequiredFields(content, method);
           responses[responseMatch[1]] = {
             statusCode: responseMatch[1],
             description: description,
-            example: example
+            example: example,
+            requiredFields: requiredFields.required,
+            optionalFields: requiredFields.optional
           };
         }
       }
@@ -428,12 +462,42 @@ export class Parser {
       }
     }
 
+    // Check if authentication is required and add auth header
+    const authPatterns = [
+      /getServerSession/gi,
+      /getCurrentUser/gi,
+      /getAuthSession/gi,
+      /session/gi,
+      /auth/gi,
+      /unauthorized/gi,
+      /401/gi
+    ];
+
+    let requiresAuth = false;
+    for (const pattern of authPatterns) {
+      if (pattern.test(content)) {
+        requiresAuth = true;
+        break;
+      }
+    }
+
+    if (requiresAuth) {
+      // Add authentication header if not already present
+      if (!headers.find(h => h.name === 'Authorization')) {
+        headers.unshift({
+          name: 'Authorization',
+          required: true,
+          description: 'Bearer token for authentication. Get token from /api/auth/signin'
+        });
+      }
+    }
+
     return headers;
   }
 
   private extractRequestBody(content: string, method: string): ApiRequestBody | undefined {
     // Only extract request body for methods that typically have a body
-    const bodyMethods = ['POST', 'PUT', 'PATCH'];
+    const bodyMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
     if (!bodyMethods.includes(method)) {
       return undefined;
     }
@@ -466,8 +530,40 @@ export class Parser {
       }
     }
 
+    // Only assume request body exists if we found actual patterns
+    // Don't force request body for all POST/PUT/PATCH/DELETE methods
+
     if (!hasRequestBody) {
       return undefined;
+    }
+
+    // First try to extract real properties from destructuring patterns
+    const realSchema = this.extractRealRequestBodySchema(content);
+    if (realSchema) {
+      return {
+        type: 'application/json',
+        schema: realSchema.schema,
+        description: `Request body for ${method} ${method === 'POST' ? 'creating' : method === 'PUT' ? 'updating' : method === 'PATCH' ? 'patching' : 'deleting'} resource`,
+        example: realSchema.example,
+        required: realSchema.required
+      };
+    }
+
+    const realExample = this.extractRealRequestBodyExample(content);
+    if (realExample) {
+      return {
+        type: 'application/json',
+        schema: {
+          type: 'object',
+          properties: Object.keys(realExample).reduce((acc, key) => {
+            acc[key] = { type: typeof realExample[key] === 'string' ? 'string' : typeof realExample[key] === 'number' ? 'number' : 'boolean' };
+            return acc;
+          }, {} as any),
+          required: []
+        },
+        description: `Request body for ${method} ${method === 'POST' ? 'creating' : method === 'PUT' ? 'updating' : method === 'PATCH' ? 'patching' : 'deleting'} resource`,
+        example: realExample
+      };
     }
 
     // Look for TypeScript interface or type definitions
@@ -527,8 +623,450 @@ export class Parser {
     return {
       type: 'application/json',
       schema: schema,
-      description: `Request body for ${method} ${method === 'POST' ? 'creating' : method === 'PUT' ? 'updating' : 'patching'} resource`,
+      description: `Request body for ${method} ${method === 'POST' ? 'creating' : method === 'PUT' ? 'updating' : method === 'PATCH' ? 'patching' : 'deleting'} resource`,
       example: Object.keys(example).length > 0 ? example : (schemaType === 'object' ? {} : null)
+    };
+  }
+
+  private extractRealRequestBodySchema(content: string): { schema: any; example: any; required: string[] } | null {
+    // Look for destructuring patterns like: const { name, description } = body;
+    const destructuringPattern = /const\s*{\s*([^}]+)\s*}\s*=\s*body/gi;
+    const match = destructuringPattern.exec(content);
+    
+    // Also look for: const body = await request.json(); const { name, description } = body;
+    if (!match) {
+      const twoStepPattern = /const\s+body\s*=\s*await\s+request\.json\(\);\s*const\s*{\s*([^}]+)\s*}\s*=\s*body/gi;
+      const twoStepMatch = twoStepPattern.exec(content);
+      if (twoStepMatch) {
+        const properties = twoStepMatch[1].split(',').map(p => p.trim());
+        const schema: any = {
+          type: 'object',
+          properties: {},
+          required: []
+        };
+        const example: any = {};
+        const required: string[] = [];
+        
+        for (const prop of properties) {
+          const cleanProp = prop.replace(/\?/g, '').trim();
+          const isRequired = !prop.includes('?');
+          
+          schema.properties[cleanProp] = {
+            type: 'string',
+            description: `${cleanProp} field`
+          };
+          
+          if (isRequired) {
+            required.push(cleanProp);
+          }
+          
+          example[cleanProp] = `[${cleanProp.toUpperCase()}]`;
+        }
+        
+        schema.required = required;
+        
+        return { schema, example, required };
+      }
+    }
+    
+    if (match) {
+      const properties = match[1].split(',').map(p => p.trim());
+      const schema: any = {
+        type: 'object',
+        properties: {},
+        required: []
+      };
+      const example: any = {};
+      const required: string[] = [];
+      
+      for (const prop of properties) {
+        const cleanProp = prop.replace(/\?/g, '').trim(); // Remove optional marker
+        const isRequired = !prop.includes('?');
+        
+        // Try to detect union types and enums
+        const typeInfo = this.detectFieldType(cleanProp, content);
+        
+        schema.properties[cleanProp] = {
+          type: typeInfo.type,
+          description: `${cleanProp} field`,
+          ...(typeInfo.enum && { enum: typeInfo.enum }),
+          ...(typeInfo.format && { format: typeInfo.format })
+        };
+        
+        if (isRequired) {
+          required.push(cleanProp);
+        }
+        
+        // Show field types instead of placeholders
+        example[cleanProp] = schema.properties[cleanProp].type;
+      }
+      
+      return { schema, example, required };
+    }
+    
+    return null;
+  }
+
+  private detectFieldType(fieldName: string, content: string): { type: string; enum?: string[]; format?: string } {
+    // Look for TypeScript interface definitions
+    const interfacePattern = new RegExp(`interface\\s+\\w+\\s*{[^}]*${fieldName}\\s*:\\s*([^;,\n]+)`, 'gi');
+    const typePattern = new RegExp(`type\\s+\\w+\\s*=\\s*{[^}]*${fieldName}\\s*:\\s*([^;,\n]+)`, 'gi');
+    
+    const patterns = [interfacePattern, typePattern];
+    
+    for (const pattern of patterns) {
+      const match = pattern.exec(content);
+      if (match) {
+        const typeDef = match[1].trim();
+        
+        // Check for union types like 'private' | 'public'
+        if (typeDef.includes('|')) {
+          const enumValues = typeDef.split('|').map(t => t.trim().replace(/['"]/g, ''));
+          return {
+            type: 'string',
+            enum: enumValues
+          };
+        }
+        
+        // Check for specific types
+        if (typeDef.includes('string')) {
+          return { type: 'string' };
+        } else if (typeDef.includes('number')) {
+          return { type: 'number' };
+        } else if (typeDef.includes('boolean')) {
+          return { type: 'boolean' };
+        } else if (typeDef.includes('Date')) {
+          return { type: 'string', format: 'date-time' };
+        }
+      }
+    }
+    
+    // Default to string if no type found
+    return { type: 'string' };
+  }
+
+  public extractRealRequestBodyExample(content: string): any {
+    const patterns = [
+      /const\s*{\s*([^}]+)\s*}\s*=\s*await\s+request\.json\(\)/gi,
+      /const\s*{\s*([^}]+)\s*}\s*=\s*await\s+req\.json\(\)/gi,
+      /const\s+\w+\s*=\s*await\s+request\.json\(\);\s*const\s*{\s*([^}]+)\s*}\s*=\s*\w+/gi,
+      /const\s+body\s*=\s*await\s+request\.json\(\);\s*const\s*{\s*([^}]+)\s*}\s*=\s*body/gi,
+      /const\s+body\s*=\s*await\s+req\.json\(\);\s*const\s*{\s*([^}]+)\s*}\s*=\s*body/gi,
+      /request\.body\.(\w+)/gi,
+      /req\.body\.(\w+)/gi
+    ];
+
+    const foundProperties = new Set<string>();
+    
+    for (const pattern of patterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const propertyMatch = match.match(/(\w+)/g);
+          if (propertyMatch) {
+            propertyMatch.forEach(prop => {
+              if (prop !== 'const' && prop !== 'await' && prop !== 'request' && prop !== 'req' && prop !== 'json' && prop !== 'body') {
+                foundProperties.add(prop);
+              }
+            });
+          }
+        }
+      }
+    }
+
+    if (foundProperties.size > 0) {
+      const example: any = {};
+      foundProperties.forEach(prop => {
+        // Generate realistic example based on property name
+        if (prop.toLowerCase().includes('email')) {
+          example[prop] = "user@example.com";
+        } else if (prop.toLowerCase().includes('name')) {
+          example[prop] = "John Doe";
+        } else if (prop.toLowerCase().includes('title')) {
+          example[prop] = "Sample Title";
+        } else if (prop.toLowerCase().includes('description')) {
+          example[prop] = "Sample description";
+        } else if (prop.toLowerCase().includes('password')) {
+          example[prop] = "password123";
+        } else if (prop.toLowerCase().includes('id')) {
+          example[prop] = "123";
+        } else if (prop.toLowerCase().includes('active') || prop.toLowerCase().includes('enabled')) {
+          example[prop] = true;
+        } else {
+          example[prop] = `sample_${prop}`;
+        }
+      });
+      return example;
+    }
+
+    return null;
+  }
+
+  private extractResponseRequiredFields(content: string, method: string): { required: string[], optional: string[] } {
+    // Tespit edilen response field'larından zorunlu/opsiyonel belirle
+    const requiredFields: string[] = [];
+    const optionalFields: string[] = [];
+    
+    // Genel pattern'ler
+    const commonRequired = ['id', 'createdAt', 'updatedAt', 'status'];
+    const commonOptional = ['description', 'notes', 'tags', 'metadata'];
+    
+    // Route dosyasından field kullanımını analiz et
+    if (content.includes('id')) requiredFields.push('id');
+    if (content.includes('createdAt')) requiredFields.push('createdAt');
+    if (content.includes('updatedAt')) requiredFields.push('updatedAt');
+    if (content.includes('status')) requiredFields.push('status');
+    
+    if (content.includes('description')) optionalFields.push('description');
+    if (content.includes('notes')) optionalFields.push('notes');
+    if (content.includes('tags')) optionalFields.push('tags');
+    
+    return { required: requiredFields, optional: optionalFields };
+  }
+
+  private extractRealResponseData(content: string, method: string): any {
+    // Look for response patterns in the code
+    const responsePatterns = [
+      // return NextResponse.json(data)
+      /return\s+NextResponse\.json\(([^)]+)\)/gi,
+      // return NextResponse.json(data, { status: 200 })
+      /return\s+NextResponse\.json\(([^,]+),\s*\{\s*status:\s*\d+\s*\}\)/gi,
+      // return NextResponse.json(data, { status: 201 })
+      /return\s+NextResponse\.json\(([^,]+),\s*\{\s*status:\s*201\s*\}\)/gi
+    ];
+
+    for (const pattern of responsePatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          // Extract the data part
+          const dataMatch = match.match(/NextResponse\.json\(([^,)]+)/);
+          if (dataMatch) {
+            const dataPart = dataMatch[1].trim();
+            
+            // Try to extract variable names or object properties
+            if (dataPart.includes('workspaces')) {
+              // Generate realistic workspace data based on current user
+              const currentDate = new Date().toISOString();
+              const userId = "user_" + Math.random().toString(36).substr(2, 9);
+              
+              return [
+                {
+                  id: "ws_" + Math.random().toString(36).substr(2, 9),
+                  name: "My Personal Workspace",
+                  description: "Personal workspace for development and testing",
+                  ownerId: userId,
+                  createdAt: currentDate,
+                  slug: "my-personal-workspace",
+                  members: [
+                    {
+                      id: "member_" + Math.random().toString(36).substr(2, 9),
+                      userId: userId,
+                      role: "owner",
+                      status: true
+                    }
+                  ]
+                },
+                {
+                  id: "ws_" + Math.random().toString(36).substr(2, 9),
+                  name: "Team Collaboration",
+                  description: "Shared workspace for team projects",
+                  ownerId: "user_" + Math.random().toString(36).substr(2, 9),
+                  createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                  slug: "team-collaboration",
+                  members: [
+                    {
+                      id: "member_" + Math.random().toString(36).substr(2, 9),
+                      userId: "user_" + Math.random().toString(36).substr(2, 9),
+                      role: "owner",
+                      status: true
+                    },
+                    {
+                      id: "member_" + Math.random().toString(36).substr(2, 9),
+                      userId: userId,
+                      role: "member",
+                      status: true
+                    }
+                  ]
+                }
+              ];
+            } else if (dataPart.includes('user')) {
+              return {
+                id: "user_789",
+                name: "John Doe",
+                email: "john.doe@example.com",
+                image: "https://example.com/avatar.jpg",
+                role: "user",
+                team: "Engineering",
+                currentFocus: "Frontend Development",
+                expertise: ["React", "TypeScript", "Next.js"],
+                createdAt: "2024-01-01T00:00:00Z"
+              };
+            } else if (dataPart.includes('tasks')) {
+              return {
+                tasks: [
+                  {
+                    id: "task_123",
+                    title: "Implement user authentication",
+                    description: "Add login and registration functionality",
+                    type: "TASK",
+                    priority: "HIGH",
+                    status: "IN_PROGRESS",
+                    position: 1,
+                    dueDate: "2024-01-20T00:00:00Z",
+                    taskBoardId: "board_456",
+                    columnId: "column_789",
+                    workspaceId: "ws_123456",
+                    storyId: "story_101",
+                    reporterId: "user_789",
+                    assigneeId: "user_456"
+                  },
+                  {
+                    id: "task_124",
+                    title: "Design user interface",
+                    description: "Create mockups for the dashboard",
+                    type: "TASK",
+                    priority: "MEDIUM",
+                    status: "TODO",
+                    position: 2,
+                    dueDate: "2024-01-25T00:00:00Z",
+                    taskBoardId: "board_456",
+                    columnId: "column_789",
+                    workspaceId: "ws_123456",
+                    storyId: "story_102",
+                    reporterId: "user_789",
+                    assigneeId: "user_789"
+                  }
+                ]
+              };
+            } else if (dataPart.includes('issues') || dataPart.includes('issue')) {
+              return [
+                {
+                  id: "issue_" + Math.random().toString(36).substr(2, 9),
+                  title: "Sample Issue Title",
+                  description: "Sample issue description",
+                  type: "BUG",
+                  priority: "HIGH",
+                  status: "OPEN",
+                  position: 1,
+                  dueDate: new Date().toISOString(),
+                  taskBoardId: "board_" + Math.random().toString(36).substr(2, 9),
+                  columnId: "column_" + Math.random().toString(36).substr(2, 9),
+                  workspaceId: "ws_" + Math.random().toString(36).substr(2, 9),
+                  storyId: "story_" + Math.random().toString(36).substr(2, 9),
+                  reporterId: "user_" + Math.random().toString(36).substr(2, 9),
+                  assigneeId: "user_" + Math.random().toString(36).substr(2, 9),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                },
+                {
+                  id: "issue_" + Math.random().toString(36).substr(2, 9),
+                  title: "Another Issue",
+                  description: "Another issue description",
+                  type: "FEATURE",
+                  priority: "MEDIUM",
+                  status: "IN_PROGRESS",
+                  position: 2,
+                  dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                  taskBoardId: "board_" + Math.random().toString(36).substr(2, 9),
+                  columnId: "column_" + Math.random().toString(36).substr(2, 9),
+                  workspaceId: "ws_" + Math.random().toString(36).substr(2, 9),
+                  storyId: "story_" + Math.random().toString(36).substr(2, 9),
+                  reporterId: "user_" + Math.random().toString(36).substr(2, 9),
+                  assigneeId: "user_" + Math.random().toString(36).substr(2, 9),
+                  createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+              ];
+            } else if (dataPart.includes('success')) {
+              return { 
+                success: true,
+                message: "Operation completed successfully",
+                timestamp: "2024-01-15T10:30:00Z"
+              };
+            } else if (dataPart.includes('data')) {
+              return { 
+                data: [],
+                pagination: {
+                  page: 1,
+                  limit: 20,
+                  total: 0,
+                  pages: 0
+                }
+              };
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private extractAuthentication(content: string, method: string): any {
+    // Check if authentication is required
+    const authPatterns = [
+      /getServerSession/gi,
+      /getCurrentUser/gi,
+      /getAuthSession/gi,
+      /session/gi,
+      /auth/gi,
+      /unauthorized/gi,
+      /401/gi
+    ];
+
+    let requiresAuth = false;
+    for (const pattern of authPatterns) {
+      if (pattern.test(content)) {
+        requiresAuth = true;
+        break;
+      }
+    }
+
+    if (!requiresAuth) {
+      return {
+        type: 'none',
+        required: false,
+        description: 'No authentication required'
+      };
+    }
+
+    // Determine authentication type
+    let authType = 'bearer';
+    if (content.includes('API_KEY') || content.includes('api-key')) {
+      authType = 'api-key';
+    } else if (content.includes('basic') || content.includes('Basic')) {
+      authType = 'basic';
+    }
+
+    return {
+      type: authType,
+      required: true,
+      description: authType === 'bearer' 
+        ? 'Bearer token authentication required. Include Authorization header with your request.'
+        : authType === 'api-key'
+        ? 'API key authentication required. Include X-API-Key header with your request.'
+        : 'Basic authentication required.',
+      headerName: authType === 'bearer' ? 'Authorization' : authType === 'api-key' ? 'X-API-Key' : 'Authorization',
+      headerFormat: authType === 'bearer' 
+        ? 'Bearer <your-token>'
+        : authType === 'api-key'
+        ? '<your-api-key>'
+        : 'Basic <base64-encoded-credentials>',
+      loginEndpoint: '/api/auth/signin',
+      example: {
+        headers: {
+          'Authorization': authType === 'bearer' ? 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' : 'Basic dXNlcjpwYXNzd29yZA==',
+          'Content-Type': 'application/json'
+        }
+      },
+      steps: [
+        '1. Send POST request to /api/auth/signin with your credentials',
+        '2. Receive authentication token in response',
+        '3. Include token in Authorization header for all protected endpoints',
+        '4. Token expires after 24 hours, re-authenticate as needed',
+        '5. Use NextAuth.js client: signIn() for login, signOut() for logout'
+      ]
     };
   }
 }

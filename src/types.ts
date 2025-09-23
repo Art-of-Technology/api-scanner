@@ -12,6 +12,8 @@ export interface ApiResponse {
   description: string;
   example?: any;
   schema?: any;
+  requiredFields?: string[];
+  optionalFields?: string[];
 }
 
 export interface ApiRequestHeader {
@@ -25,6 +27,7 @@ export interface ApiRequestBody {
   schema?: any;
   description?: string;
   example?: any;
+  required?: string[];
 }
 
 export interface ApiEndpoint {
@@ -89,6 +92,20 @@ export interface ApiEndpoint {
       request: string;
       response: any;
     };
+  };
+  authentication?: {
+    type: 'none' | 'bearer' | 'api-key' | 'basic';
+    required: boolean;
+    description: string;
+    headerName?: string;
+    headerFormat?: string;
+    loginEndpoint?: string;
+    example?: {
+      headers: {
+        [key: string]: string;
+      };
+    };
+    steps?: string[];
   };
 }
 

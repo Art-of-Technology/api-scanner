@@ -228,6 +228,27 @@ export function EndpointCard({ endpoint, index }: EndpointCardProps) {
                   </pre>
                 </div>
               )}
+              
+              {/* Required Fields */}
+              {((response as any).requiredFields || (response as any).optionalFields) && (
+                <div className="mt-3">
+                  <div className="text-xs text-muted-foreground mb-2">Field Requirements:</div>
+                  <div className="space-y-2">
+                    {(response as any).requiredFields && (response as any).requiredFields.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default" className="text-xs">Required</Badge>
+                        <span className="text-xs">{(response as any).requiredFields.join(', ')}</span>
+                      </div>
+                    )}
+                    {(response as any).optionalFields && (response as any).optionalFields.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">Optional</Badge>
+                        <span className="text-xs">{(response as any).optionalFields.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

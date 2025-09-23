@@ -9,35 +9,34 @@ export class Formatter {
     this.options = options;
   }
   async format(documentation: ApiDocumentation, format: 'json' | 'markdown' | 'swagger' | 'react' | 'json-folder', verbose: boolean = false): Promise<string> {
+    // Enhance documentation with new features for all formats
+    const enhancedDocumentation = this.enhanceDocumentation(documentation);
+    
     switch (format) {
       case 'json':
-        return this.formatJson(documentation);
+        return this.formatJson(enhancedDocumentation);
       case 'json-folder':
-        return this.formatJsonFolder(documentation, this.options.baseUrl);
+        return this.formatJsonFolder(enhancedDocumentation, this.options.baseUrl);
       case 'markdown':
-        return this.formatMarkdown(documentation);
+        return this.formatMarkdown(enhancedDocumentation);
       case 'swagger':
-        return this.formatSwagger(documentation);
+        return this.formatSwagger(enhancedDocumentation);
       case 'react':
-        return this.formatReact(documentation);
+        return this.formatReact(enhancedDocumentation);
       default:
-        return this.formatJson(documentation);
+        return this.formatJson(enhancedDocumentation);
     }
   }
 
-  private formatJson(documentation: ApiDocumentation): string {
-    return JSON.stringify(documentation, null, 2);
-  }
-
-  private async formatJsonFolder(documentation: ApiDocumentation, baseUrl?: string): Promise<string> {
+  private enhanceDocumentation(documentation: ApiDocumentation): ApiDocumentation {
     // Detect base URL from endpoints or use provided one
-    const detectedBaseUrl = this.detectBaseUrl(documentation.endpoints, baseUrl);
+    const detectedBaseUrl = this.detectBaseUrl(documentation.endpoints, this.options.baseUrl);
     
     // Detect authentication requirements
     const authInfo = this.detectAuthentication(documentation.endpoints);
     
     // Create enhanced documentation with new fields
-    const enhancedDocumentation = {
+    return {
       ...documentation,
       info: {
         ...documentation.info,
@@ -54,6 +53,15 @@ export class Formatter {
         pagination: this.generatePagination(ep)
       }))
     };
+  }
+
+  private formatJson(documentation: ApiDocumentation): string {
+    return JSON.stringify(documentation, null, 2);
+  }
+
+  private async formatJsonFolder(documentation: ApiDocumentation, baseUrl?: string): Promise<string> {
+    // Use the enhanced documentation (already enhanced in main format method)
+    const enhancedDocumentation = documentation;
     
     // Write to api-documentation.json (single file only)
     await fs.writeFile('public/api-documentation.json', JSON.stringify(enhancedDocumentation, null, 2));
