@@ -229,26 +229,6 @@ export function EndpointCard({ endpoint, index }: EndpointCardProps) {
                 </div>
               )}
               
-              {/* Required Fields */}
-              {((response as any).requiredFields || (response as any).optionalFields) && (
-                <div className="mt-3">
-                  <div className="text-xs text-muted-foreground mb-2">Field Requirements:</div>
-                  <div className="space-y-2">
-                    {(response as any).requiredFields && (response as any).requiredFields.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default" className="text-xs">Required</Badge>
-                        <span className="text-xs">{(response as any).requiredFields.join(', ')}</span>
-                      </div>
-                    )}
-                    {(response as any).optionalFields && (response as any).optionalFields.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">Optional</Badge>
-                        <span className="text-xs">{(response as any).optionalFields.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
@@ -474,6 +454,43 @@ export function EndpointCard({ endpoint, index }: EndpointCardProps) {
                     {renderRequestBody()}
                   </div>
                 )}
+                
+                {/* Field Requirements - Always show for all methods */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="text-base font-medium mb-3">Field Requirements</h4>
+                  <div className="space-y-2">
+                    {endpoint.requestBody ? (
+                      <>
+                        {endpoint.requestBody.required && endpoint.requestBody.required.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default" className="text-xs">Required</Badge>
+                            <span className="text-xs">{endpoint.requestBody.required.join(', ')}</span>
+                          </div>
+                        )}
+                        {endpoint.requestBody.schema && endpoint.requestBody.schema.properties && (
+                          <div className="space-y-1">
+                            {Object.entries(endpoint.requestBody.schema.properties).map(([field, schema]: [string, any]) => {
+                              const isRequired = endpoint.requestBody?.required?.includes(field);
+                              return (
+                                <div key={field} className="flex items-center gap-2 text-xs">
+                                  <Badge variant={isRequired ? "default" : "secondary"} className="text-xs">
+                                    {isRequired ? "Required" : "Optional"}
+                                  </Badge>
+                                  <span className="font-mono">{field}</span>
+                                  <span className="text-muted-foreground">({schema.type})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        {endpoint.method === 'GET' ? 'No request body required for GET requests' : 'No request body defined'}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>

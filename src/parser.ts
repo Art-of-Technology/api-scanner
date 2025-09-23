@@ -656,7 +656,8 @@ export class Parser {
             description: `${cleanProp} field`
           };
           
-          if (isRequired) {
+          // Smart required field detection
+          if (this.isFieldRequired(cleanProp, content)) {
             required.push(cleanProp);
           }
           
@@ -693,7 +694,8 @@ export class Parser {
           ...(typeInfo.format && { format: typeInfo.format })
         };
         
-        if (isRequired) {
+        // Smart required field detection
+        if (this.isFieldRequired(cleanProp, content)) {
           required.push(cleanProp);
         }
         
@@ -705,6 +707,35 @@ export class Parser {
     }
     
     return null;
+  }
+
+  private isFieldRequired(fieldName: string, content: string): boolean {
+    // Check if field has optional marker (?)
+    if (content.includes(`${fieldName}?`)) {
+      return false;
+    }
+    
+    // Common required fields
+    const alwaysRequired = ['id', 'name', 'title', 'email', 'password', 'status'];
+    if (alwaysRequired.includes(fieldName.toLowerCase())) {
+      return true;
+    }
+    
+    // Common optional fields
+    const alwaysOptional = ['description', 'notes', 'tags', 'metadata', 'createdAt', 'updatedAt'];
+    if (alwaysOptional.includes(fieldName.toLowerCase())) {
+      return false;
+    }
+    
+    // Check for validation patterns
+    if (content.includes(`required: true`) || content.includes(`required:true`)) {
+      return true;
+    }
+    
+    // Default to required for core fields, optional for others
+    return !fieldName.toLowerCase().includes('optional') && 
+           !fieldName.toLowerCase().includes('note') &&
+           !fieldName.toLowerCase().includes('tag');
   }
 
   private detectFieldType(fieldName: string, content: string): { type: string; enum?: string[]; format?: string } {
