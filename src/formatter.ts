@@ -384,14 +384,24 @@ export default ApiDocsPage;`;
 
     // 5. Try to detect from Next.js config (SECURITY: Only read public config, not env vars)
     try {
-      const nextConfigPath = require.resolve('../../next.config.js');
-      const nextConfig = require(nextConfigPath);
-      
-      // SECURITY: Only read public config properties, not environment variables
-      if (nextConfig && typeof nextConfig === 'object' && nextConfig.env) {
-        // Only read public API_URL, not sensitive env vars
-        if (typeof nextConfig.env.API_URL === 'string' && nextConfig.env.API_URL.startsWith('http')) {
-          return nextConfig.env.API_URL;
+      // Try all supported Next.js config extensions
+      const configExtensions = ['.js', '.mjs', '.ts'];
+      let nextConfigPath: string | undefined;
+      for (const ext of configExtensions) {
+        const candidate = path.resolve(process.cwd(), `next.config${ext}`);
+        if (fs.existsSync(candidate)) {
+          nextConfigPath = candidate;
+          break;
+        }
+      }
+      if (nextConfigPath) {
+        const nextConfig = require(nextConfigPath);
+        // SECURITY: Only read public config properties, not environment variables
+        if (nextConfig && typeof nextConfig === 'object' && nextConfig.env) {
+          // Only read public API_URL, not sensitive env vars
+          if (typeof nextConfig.env.API_URL === 'string' && nextConfig.env.API_URL.startsWith('http')) {
+            return nextConfig.env.API_URL;
+          }
         }
       }
     } catch (error) {

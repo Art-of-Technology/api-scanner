@@ -834,7 +834,7 @@ export class Parser {
   }
 
   private extractResponseRequiredFields(content: string, method: string): { required: string[], optional: string[] } {
-    // Tespit edilen response field'larından zorunlu/opsiyonel belirle
+    // Determine required/optional from detected response fields
     const requiredFields: string[] = [];
     const optionalFields: string[] = [];
     
