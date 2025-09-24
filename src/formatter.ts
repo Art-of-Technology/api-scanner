@@ -346,7 +346,25 @@ export default ApiDocsPage;`;
 
     // 4. Try to detect from package.json scripts (SECURITY: Only read package.json, not other configs)
     try {
-      const packageJsonPath = require.resolve('../../package.json');
+      // More robust path resolution - try multiple possible locations
+      const possiblePaths = [
+        path.resolve(process.cwd(), 'package.json'),
+        path.resolve(__dirname, '../../package.json'),
+        path.resolve(process.cwd(), '../package.json')
+      ];
+      
+      let packageJsonPath: string | null = null;
+      for (const possiblePath of possiblePaths) {
+        if (fs.existsSync(possiblePath)) {
+          packageJsonPath = possiblePath;
+          break;
+        }
+      }
+      
+      if (!packageJsonPath) {
+        throw new Error('package.json not found');
+      }
+      
       const packageJson = require(packageJsonPath);
       
       // SECURITY: Only read scripts section, ignore other sensitive data
