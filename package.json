@@ -1,6 +1,6 @@
 {
   "name": "api-scanner",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Next.js API route scanner that automatically generates API documentation",
   "main": "dist/index.js",
   "bin": {
