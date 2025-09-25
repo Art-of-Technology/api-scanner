@@ -19,6 +19,10 @@ Next.js API route scanner that automatically generates API documentation from yo
 - 🔍 **Request Analysis**: Automatically detects request headers and request body schemas from TypeScript code
 - 🤖 **Smart Title Generation**: Automatically generates human-readable titles and descriptions for endpoints (e.g., "Create Auth Login", "List Users")
 - 📁 **JSON Folder Structure**: Organizes documentation in hierarchical JSON files for easy management
+- ✅ **Required/Optional Fields**: Smart detection of required vs optional fields in API requests
+- 🔗 **Union Type Support**: Parse and display TypeScript union types like `'private' | 'public'`
+- 🎯 **Realistic Examples**: Generate field types instead of placeholders
+- 🔐 **Enhanced Authentication**: Better auth format detection with specific instructions
 
 ### React Components
 - ⚛️ **React 19 Compatible**: Built with the latest React and optimized for modern Next.js
@@ -41,6 +45,8 @@ Next.js API route scanner that automatically generates API documentation from yo
 - 📊 **Statistics**: Live stats showing file counts, folders, and version info
 - 🎨 **Custom Toast**: Modern toast notifications for save status and errors
 - ⚡ **Performance Optimized**: Lightweight editor with minimal resource usage
+- ✅ **Field Requirements**: Display required/optional fields in Request tab with badges
+- 🖱️ **Fixed Scroll**: Resolved Monaco Editor scroll issues for better UX
 
 ## Installation
 
@@ -297,18 +303,22 @@ public/api-documentation/
           "properties": {
             "title": { "type": "string" },
             "description": { "type": "string" }
-          }
+          },
+          "required": ["title"]
         },
         "description": "Issue creation data",
         "example": {
           "title": "Sample Issue",
           "description": "This is a sample issue"
-        }
+        },
+        "required": ["title"]
       },
       "responses": {
         "200": {
           "description": "Success",
-          "example": { "issues": [] }
+          "example": { "issues": [] },
+          "requiredFields": ["id", "status"],
+          "optionalFields": ["description"]
         }
       },
       "tags": ["issues"]
@@ -804,9 +814,9 @@ export async function POST(request: Request) {
 ```typescript
 // src/app/api/users/route.ts
 interface CreateUserRequest {
-  name: string;
-  email: string;
-  age?: number;
+  name: string;        // Required
+  email: string;       // Required  
+  age?: number;        // Optional
 }
 
 export async function POST(request: Request) {
@@ -820,6 +830,7 @@ export async function POST(request: Request) {
   // Scanner will automatically detect:
   // - Request headers: Authorization, Content-Type
   // - Request body schema from CreateUserRequest interface
+  // - Required fields: name, email (age is optional)
   // - Generate example JSON based on interface properties
   
   return Response.json({ 

@@ -20,8 +20,13 @@ export class ApiScanner {
       ...options
     };
     
+    // Set correct output for json-folder format
+    if (this.options.format === 'json-folder') {
+      this.options.output = 'public/api-documentation';
+    }
+    
     this.parser = new Parser();
-    this.formatter = new Formatter();
+    this.formatter = new Formatter(this.options);
   }
 
   async scan(): Promise<ApiDocumentation> {
@@ -168,10 +173,20 @@ export class ApiScanner {
 
     // Format and save documentation
     const output = await this.formatter.format(documentation, this.options.format!, this.options.verbose);
-    await fs.writeFile(this.options.output!, output);
-
-    if (this.options.verbose) {
-      console.log(`✅ Documentation saved to: ${this.options.output}`);
+    
+    // Handle different output types
+    if (this.options.format === 'json-folder') {
+      // For json-folder, output is already handled by formatter
+      if (this.options.verbose) {
+        console.log(`✅ Documentation saved to: ${this.options.output}`);
+      }
+    } else {
+      // For other formats, write to file
+      await fs.writeFile(this.options.output!, output);
+      
+      if (this.options.verbose) {
+        console.log(`✅ Documentation saved to: ${this.options.output}`);
+      }
     }
   }
 }
